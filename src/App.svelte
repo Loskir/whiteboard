@@ -8,25 +8,6 @@
     Line,
   } from './types/geometry'
 
-  type Tool = 'pencil' | 'eraser' | 'pan'
-  let tool: Tool = 'pencil'
-
-  const getCanvasCursor = () => {
-    switch (tool) {
-      case 'pencil':
-        return 'crosshair'
-      default:
-        return 'default'
-    }
-  }
-
-  const convertCanvasToDataX = (x) => x - canvasWidth / 2
-  const convertCanvasToDataY = (y) => y - canvasHeight / 2
-  const convertDataToCanvasX = (x) => x + canvasWidth / 2
-  const convertDataToCanvasY = (y) => y + canvasHeight / 2
-
-  $: canvasCursor = getCanvasCursor()
-
   let canvas
 
   let canvasWidth = document.body.clientWidth
@@ -37,10 +18,59 @@
     canvasHeight = document.body.clientHeight
   }
 
-  let isDrawing = false
-
   const lines: Line[] = []
-  let currentLineIndex = 0
+
+  let currentToolName = 'pencil'
+
+  interface Tool {
+    name: string
+    cursor?: string
+    onDown(point: Point): void
+    onMove(point: Point): void
+    onUp(point: Point): void
+  }
+
+  const tools: Tool[] = [
+    {
+      name: 'pencil',
+      cursor: 'crosshair',
+      isDrawing: false,
+      currentLineIndex: -1,
+      onDown(point: Point) {
+        this.isDrawing = true
+        this.currentLineIndex = lines.length
+        lines.push({
+          points: [point],
+        })
+      },
+      onMove(point: Point) {
+        if (!this.isDrawing) {
+          return
+        }
+        lines[this.currentLineIndex].points.push(point)
+      },
+      onUp() {
+        this.isDrawing = false
+        this.currentLineIndex = -1
+        console.log(lines)
+      },
+    },
+  ]
+  const toolsMap = new Map<string, Tool>()
+  for (const tool of tools) {
+    toolsMap.set(tool.name, tool)
+  }
+
+  $: currentTool = toolsMap.get(currentToolName)
+  $: canvasCursor = currentTool.cursor || 'default'
+
+  let panX = 0
+  let panY = 0
+
+  const convertCanvasToDataX = (x) => x - canvasWidth / 2 - panX
+  const convertCanvasToDataY = (y) => y - canvasHeight / 2 - panY
+  const convertDataToCanvasX = (x) => x + canvasWidth / 2 + panX
+  const convertDataToCanvasY = (y) => y + canvasHeight / 2 + panY
 
   const draw = () => {
     const ctx: CanvasRenderingContext2D = canvas.getContext('2d')
@@ -69,31 +99,25 @@
     })
   }
 
-  const startLine = () => {
-    isDrawing = true
-    currentLineIndex = lines.length
-    lines.push({
-      points: [],
-    })
+  const handleDown = (point: Point) => {
+    return currentTool.onDown(point)
   }
-  const endLine = () => {
-    isDrawing = false
-    currentLineIndex = -1
-    console.log(lines)
-  }
-
   const handleMove = (point: Point) => {
-    if (!isDrawing) {
-      return
-    }
-    lines[currentLineIndex].points.push(point)
+    currentTool.onMove(point)
     draw()
   }
+  const handleUp = (point: Point) => {
+    return currentTool.onUp(point)
+  }
 
-  const handleMousemove = (e: MouseEvent) => handleMove({
+  const getPointFromEvent = (e: MouseEvent) => ({
     x: convertCanvasToDataX(e.clientX),
     y: convertCanvasToDataY(e.clientY),
   })
+
+  const handleMousedown = (e: MouseEvent) => handleDown(getPointFromEvent(e))
+  const handleMousemove = (e: MouseEvent) => handleMove(getPointFromEvent(e))
+  const handleMouseup = (e: MouseEvent) => handleUp(getPointFromEvent(e))
   const handleResize = async () => {
     updateCanvasSize()
     await tick()
@@ -103,9 +127,8 @@
 
 <svelte:window
   on:resize={handleResize}
-  on:mousedown={startLine}
-  on:mouseup={endLine}
   on:mousemove={handleMousemove}
+  on:mouseup={handleMouseup}
 />
 
 <main>
@@ -114,10 +137,25 @@
     width={canvasWidth}
     height={canvasHeight}
     style="cursor: {canvasCursor}"
+    on:mousedown={handleMousedown}
   />
+  <div class="tool-select">
+    <label>
+      <select bind:value={currentToolName}>
+        {#each tools as tool}
+          <option value={tool.name}>{tool.name}</option>
+        {/each}
+      </select>
+    </label>
+  </div>
 </main>
 
 <style lang="stylus">
   main
     display flex
+
+  .tool-select
+    position fixed
+    top 0
+    right 0
 </style>
