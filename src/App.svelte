@@ -6,6 +6,8 @@
   import type {
     Point,
     Line,
+    GlobalPoint,
+    LocalPoint,
   } from './types/geometry'
 
   let canvas
@@ -30,31 +32,67 @@
     onUp(point: Point): void
   }
 
+  class Pencil implements Tool {
+    name: string = 'pencil'
+    cursor:string = 'crosshair'
+    isDown: boolean
+    currentLineIndex: number
+
+    onDown(point: GlobalPoint) {
+      this.isDown = true
+      this.currentLineIndex = lines.length
+      lines.push({
+        points: [convertGlobalToLocal(point)]
+      })
+    }
+    onMove(point: GlobalPoint) {
+      if (!this.isDown) {
+        return
+      }
+      lines[this.currentLineIndex].points.push(convertGlobalToLocal(point))
+    }
+    onUp() {
+      this.isDown = false
+      this.currentLineIndex = -1
+      console.log(lines)
+    }
+  }
+  class Pan implements Tool {
+    name: string = 'pan'
+    cursor:string = 'move'
+    isDown: boolean
+    initialPanX: number
+    initialPanY: number
+    downX: number
+    downY: number
+
+    updatePan(point: GlobalPoint) {
+      panX = this.initialPanX + (point.x - this.downX)
+      panY = this.initialPanY + (point.y - this.downY)
+    }
+
+    onDown(point: GlobalPoint) {
+      this.isDown = true
+      this.initialPanX = panX
+      this.initialPanY = panY
+      this.downX = point.x
+      this.downY = point.y
+    }
+    onMove(point: GlobalPoint) {
+      if (!this.isDown) {
+        return
+      }
+      this.updatePan(point)
+    }
+    onUp(point: GlobalPoint) {
+      this.isDown = false
+      this.updatePan(point)
+    }
+  }
+
   const tools: Tool[] = [
-    {
-      name: 'pencil',
-      cursor: 'crosshair',
-      isDrawing: false,
-      currentLineIndex: -1,
-      onDown(point: Point) {
-        this.isDrawing = true
-        this.currentLineIndex = lines.length
-        lines.push({
-          points: [point],
-        })
-      },
-      onMove(point: Point) {
-        if (!this.isDrawing) {
-          return
-        }
-        lines[this.currentLineIndex].points.push(point)
-      },
-      onUp() {
-        this.isDrawing = false
-        this.currentLineIndex = -1
-        console.log(lines)
-      },
-    },
+    new Pencil(),
+    new Pan(),
   ]
   const toolsMap = new Map<string, Tool>()
   for (const tool of tools) {
@@ -71,6 +109,14 @@
   const convertGlobalToLocalY = (y) => y - canvasHeight / 2 - panY
   const convertLocalToGlobalX = (x) => x + canvasWidth / 2 + panX
   const convertLocalToGlobalY = (y) => y + canvasHeight / 2 + panY
+  const convertGlobalToLocal = (point: GlobalPoint):LocalPoint => ({
+    x: convertGlobalToLocalX(point.x),
+    y: convertGlobalToLocalY(point.y),
+  })
+  const convertLocalToGlobal = (point: LocalPoint):GlobalPoint => ({
+    x: convertLocalToGlobalX(point.x),
+    y: convertLocalToGlobalY(point.y),
+  })
 
   const draw = () => {
     const ctx: CanvasRenderingContext2D = canvas.getContext('2d')
@@ -111,8 +157,8 @@
   }
 
   const getPointFromEvent = (e: MouseEvent) => ({
-    x: convertCanvasToDataX(e.clientX),
-    y: convertCanvasToDataY(e.clientY),
+    x: e.clientX,
+    y: e.clientY,
   })
 
   const handleMousedown = (e: MouseEvent) => handleDown(getPointFromEvent(e))
