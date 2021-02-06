@@ -80,9 +80,9 @@
           const prevPoint = currentLine.points[i - 1]
           const thisPoint = currentLine.points[i]
           const nextPoint = currentLine.points[i + 1]
-          const angle1 = Math.atan2(thisPoint.y - prevPoint.y, thisPoint.x - prevPoint.x)
-          const angle2 = Math.atan2(nextPoint.y - thisPoint.y, nextPoint.x - thisPoint.x)
-          if (angle1 !== angle2) {
+          const tg1 = (thisPoint.y - prevPoint.y) / (thisPoint.x - prevPoint.x)
+          const tg2 = (nextPoint.y - thisPoint.y) / (nextPoint.x - thisPoint.x)
+          if (tg1 !== tg2) {
             newLine.points.push(thisPoint)
           }
         }
