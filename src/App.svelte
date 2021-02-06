@@ -67,8 +67,27 @@
 
     onUp() {
       this.isDown = false
-      if (lines[this.currentLineIndex].points.length === 1) {
+      let currentLine = lines[this.currentLineIndex]
+      if (currentLine.points.length === 1) {
         lines.splice(this.currentLineIndex, 1) // "empty"
+      } else if (currentLine.points.length > 2) {
+        const newLine: Line = {
+          points: [
+            currentLine.points[0]
+          ],
+        }
+        for (let i = 1; i < currentLine.points.length - 1; ++i) {
+          const prevPoint = currentLine.points[i - 1]
+          const thisPoint = currentLine.points[i]
+          const nextPoint = currentLine.points[i + 1]
+          const angle1 = Math.atan2(thisPoint.y - prevPoint.y, thisPoint.x - prevPoint.x)
+          const angle2 = Math.atan2(nextPoint.y - thisPoint.y, nextPoint.x - thisPoint.x)
+          if (angle1 !== angle2) {
+            newLine.points.push(thisPoint)
+          }
+        }
+        newLine.points.push(currentLine.points[currentLine.points.length - 1])
+        lines[this.currentLineIndex] = newLine
       }
       this.currentLineIndex = -1
       console.log(lines)
