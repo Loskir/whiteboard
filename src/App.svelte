@@ -49,12 +49,25 @@
       if (!this.isDown) {
         return
       }
-      lines[this.currentLineIndex].points.push(convertGlobalToLocal(point))
+      const localPoint = convertGlobalToLocal(point)
+      const currentLine = lines[this.currentLineIndex]
+      if (currentLine.points.length === 0) {
+        currentLine.points.push(localPoint)
+      }
+      const lastPoint = currentLine.points[currentLine.points.length - 1]
+      if (lastPoint.x === localPoint.x && lastPoint.y === localPoint.y) {
+        return // the same as the previous point
+      }
+      currentLine.points.push(localPoint)
     }
     onUp() {
       this.isDown = false
+      if (lines[this.currentLineIndex].points.length === 1) {
+        lines.splice(this.currentLineIndex, 1) // "empty"
+      }
       this.currentLineIndex = -1
       console.log(lines)
+      draw()
     }
   }
   class Pan implements Tool {
