@@ -72,6 +72,9 @@
     }
 
     onUp() {
+      if (!this.isDown) {
+        return
+      }
       this.isDown = false
       let currentLine = lines[this.currentLineIndex]
       if (currentLine.points.length === 1) {
@@ -137,6 +140,9 @@
     }
 
     onUp(point: GlobalPoint) {
+      if (!this.isDown) {
+        return
+      }
       this.isDown = false
       this.updatePan(point)
     }
