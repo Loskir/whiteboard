@@ -197,8 +197,8 @@
   }
 
   const getPointFromEvent = (e: MouseEvent): GlobalPoint => ({
-    x: e.pageX,
-    y: e.pageY,
+    x: e.pageX - canvas.offsetLeft,
+    y: e.pageY - canvas.offsetTop,
   })
 
   const handleMousedown = (e: MouseEvent) => handleDown(getPointFromEvent(e))
