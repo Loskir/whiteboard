@@ -229,9 +229,27 @@
     await tick()
     draw()
   }
-  const handleMousedown = (e: MouseEvent) => handleDown(getPointFromEvent(e))
-  const handleMousemove = (e: MouseEvent) => handleMove(getPointFromEvent(e))
-  const handleMouseup = (e: MouseEvent) => handleUp(getPointFromEvent(e))
+  const handleMousedown = (e: MouseEvent) => {
+    const point = getPointFromEvent(e)
+    if (e.button !== 0) {
+      return toolsMap.get('pan').onDown(point)
+    }
+    return currentTool.onDown(getPointFromEvent(e))
+  }
+  const handleMousemove = (e: MouseEvent) => {
+    const point = getPointFromEvent(e)
+    if (e.button !== 0) {
+      return toolsMap.get('pan').onMove(point)
+    }
+    currentTool.onMove(point)
+  }
+  const handleMouseup = (e: MouseEvent) => {
+    const point = getPointFromEvent(e)
+    if (e.button !== 0) {
+      return toolsMap.get('pan').onUp(point)
+    }
+    currentTool.onUp(point)
+  }
   const handleTouchstart = (event: TouchEvent) => {
     const touch = event.touches[0]
     if (!touch) {
@@ -268,7 +286,7 @@
     style="cursor: {canvasCursor}"
     on:mousedown|passive={handleMousedown}
     on:touchstart|passive={handleTouchstart}
-    on:contextmenu={handleMouseup}
+    on:contextmenu|preventDefault|stopPropagation=""
   />
   <div class="tool-select" on:mousedown|stopPropagation="" on:touchstart|passive|stopPropagation="">
     <label>
