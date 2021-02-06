@@ -27,14 +27,17 @@
   interface Tool {
     name: string
     cursor?: string
+
     onDown(point: Point): void
+
     onMove(point: Point): void
+
     onUp(point: Point): void
   }
 
   class Pencil implements Tool {
     name: string = 'pencil'
-    cursor:string = 'crosshair'
+    cursor: string = 'crosshair'
     isDown: boolean
     currentLineIndex: number
 
@@ -42,9 +45,10 @@
       this.isDown = true
       this.currentLineIndex = lines.length
       lines.push({
-        points: [convertGlobalToLocal(point)]
+        points: [convertGlobalToLocal(point)],
       })
     }
+
     onMove(point: GlobalPoint) {
       if (!this.isDown) {
         return
@@ -60,6 +64,7 @@
       }
       currentLine.points.push(localPoint)
     }
+
     onUp() {
       this.isDown = false
       if (lines[this.currentLineIndex].points.length === 1) {
@@ -70,9 +75,10 @@
       draw()
     }
   }
+
   class Pan implements Tool {
     name: string = 'pan'
-    cursor:string = 'move'
+    cursor: string = 'move'
     isDown: boolean
     initialPanX: number
     initialPanY: number
@@ -91,12 +97,14 @@
       this.downX = point.x
       this.downY = point.y
     }
+
     onMove(point: GlobalPoint) {
       if (!this.isDown) {
         return
       }
       this.updatePan(point)
     }
+
     onUp(point: GlobalPoint) {
       this.isDown = false
       this.updatePan(point)
@@ -122,11 +130,11 @@
   const convertGlobalToLocalY = (y) => y - canvasHeight / 2 - panY
   const convertLocalToGlobalX = (x) => x + canvasWidth / 2 + panX
   const convertLocalToGlobalY = (y) => y + canvasHeight / 2 + panY
-  const convertGlobalToLocal = (point: GlobalPoint):LocalPoint => ({
+  const convertGlobalToLocal = (point: GlobalPoint): LocalPoint => ({
     x: convertGlobalToLocalX(point.x),
     y: convertGlobalToLocalY(point.y),
   })
-  const convertLocalToGlobal = (point: LocalPoint):GlobalPoint => ({
+  const convertLocalToGlobal = (point: LocalPoint): GlobalPoint => ({
     x: convertLocalToGlobalX(point.x),
     y: convertLocalToGlobalY(point.y),
   })
