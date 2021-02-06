@@ -196,9 +196,9 @@
     return currentTool.onUp(point)
   }
 
-  const getPointFromEvent = (e: MouseEvent) => ({
-    x: e.clientX,
-    y: e.clientY,
+  const getPointFromEvent = (e: MouseEvent): GlobalPoint => ({
+    x: e.pageX,
+    y: e.pageY,
   })
 
   const handleMousedown = (e: MouseEvent) => handleDown(getPointFromEvent(e))
