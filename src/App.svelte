@@ -32,7 +32,7 @@
 
     onMove(point: Point): void
 
-    onUp(point: Point): void
+    onUp(point?: Point): void
   }
 
   class Pencil implements Tool {
