@@ -266,10 +266,10 @@
     width={canvasWidth}
     height={canvasHeight}
     style="cursor: {canvasCursor}"
-    on:mousedown={handleMousedown}
-    on:touchstart={handleTouchstart}
+    on:mousedown|passive={handleMousedown}
+    on:touchstart|passive={handleTouchstart}
   />
-  <div class="tool-select" on:mousedown|stopPropagation="" on:touchstart|stopPropagation="">
+  <div class="tool-select" on:mousedown|stopPropagation="" on:touchstart|passive|stopPropagation="">
     <label>
       <select bind:value={currentToolName}>
         {#each tools as tool}
