@@ -284,6 +284,9 @@
 <style lang="stylus">
   main
     display flex
+    flex-direction column
+    justify-content center
+    align-items center
 
   .tool-select
     position fixed
