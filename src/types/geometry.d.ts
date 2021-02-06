@@ -3,6 +3,7 @@ export interface Point {
   y: number
 }
 export type Line = {
+  color: string
   points: Point[]
 }
 export type Segment = {

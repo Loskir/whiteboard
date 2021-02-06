@@ -49,6 +49,7 @@
       this.isDown = true
       this.currentLineIndex = lines.length
       lines.push({
+        color: `hsl(${Math.floor(Math.random() * 360)}, 50%, 50%)`,
         points: [convertGlobalToLocal(point)],
       })
     }
@@ -77,6 +78,7 @@
         lines.splice(this.currentLineIndex, 1) // "empty"
       } else if (currentLine.points.length > 2) {
         const newLine: Line = {
+          color: currentLine.color,
           points: [
             currentLine.points[0]
           ],
@@ -171,11 +173,11 @@
   const draw = () => {
     const ctx: CanvasRenderingContext2D = canvas.getContext('2d')
     ctx.clearRect(0, 0, canvasWidth, canvasHeight)
-    ctx.strokeStyle = 'red'
     ctx.lineWidth = 2
     ctx.lineJoin = 'round'
     ctx.lineCap = 'round'
     lines.forEach((line) => {
+      ctx.strokeStyle = line.color
       if (line.points.length === 0) {
         return
       }
