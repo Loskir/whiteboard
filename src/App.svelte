@@ -67,10 +67,10 @@
   let panX = 0
   let panY = 0
 
-  const convertCanvasToDataX = (x) => x - canvasWidth / 2 - panX
-  const convertCanvasToDataY = (y) => y - canvasHeight / 2 - panY
-  const convertDataToCanvasX = (x) => x + canvasWidth / 2 + panX
-  const convertDataToCanvasY = (y) => y + canvasHeight / 2 + panY
+  const convertGlobalToLocalX = (x) => x - canvasWidth / 2 - panX
+  const convertGlobalToLocalY = (y) => y - canvasHeight / 2 - panY
+  const convertLocalToGlobalX = (x) => x + canvasWidth / 2 + panX
+  const convertLocalToGlobalY = (y) => y + canvasHeight / 2 + panY
 
   const draw = () => {
     const ctx: CanvasRenderingContext2D = canvas.getContext('2d')
@@ -85,14 +85,14 @@
       }
       ctx.beginPath()
       ctx.moveTo(
-        convertDataToCanvasX(line.points[0].x),
-        convertDataToCanvasY(line.points[0].y),
+        convertLocalToGlobalX(line.points[0].x),
+        convertLocalToGlobalY(line.points[0].y),
       )
       for (let i = 1; i < line.points.length; ++i) {
         const point = line.points[i]
         ctx.lineTo(
-          convertDataToCanvasX(point.x),
-          convertDataToCanvasY(point.y),
+          convertLocalToGlobalX(point.x),
+          convertLocalToGlobalY(point.y),
         )
       }
       ctx.stroke()
