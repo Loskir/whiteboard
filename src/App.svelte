@@ -83,7 +83,7 @@
         const newLine: Line = {
           color: currentLine.color,
           points: [
-            currentLine.points[0]
+            currentLine.points[0],
           ],
         }
         for (let i = 1; i < currentLine.points.length - 1; ++i) {
@@ -139,12 +139,14 @@
       draw()
     }
 
-    onUp(point: GlobalPoint) {
+    onUp(point?: GlobalPoint) {
       if (!this.isDown) {
         return
       }
       this.isDown = false
-      this.updatePan(point)
+      if (point) {
+        this.updatePan(point)
+      }
     }
   }
 
@@ -209,22 +211,44 @@
   const handleMove = (point: Point) => {
     return currentTool.onMove(point)
   }
-  const handleUp = (point: Point) => {
+  const handleUp = (point?: Point) => {
     return currentTool.onUp(point)
   }
 
-  const getPointFromEvent = (e: MouseEvent): GlobalPoint => ({
-    x: e.pageX - canvas.offsetLeft,
-    y: e.pageY - canvas.offsetTop,
+  const getPointFromEvent = (event: MouseEvent): GlobalPoint => ({
+    x: event.pageX - canvas.offsetLeft,
+    y: event.pageY - canvas.offsetTop,
+  })
+  const getPointFromTouch = (touch: Touch): GlobalPoint => ({
+    x: touch.pageX - canvas.offsetLeft,
+    y: touch.pageY - canvas.offsetTop,
   })
 
-  const handleMousedown = (e: MouseEvent) => handleDown(getPointFromEvent(e))
-  const handleMousemove = (e: MouseEvent) => handleMove(getPointFromEvent(e))
-  const handleMouseup = (e: MouseEvent) => handleUp(getPointFromEvent(e))
   const handleResize = async () => {
     updateCanvasSize()
     await tick()
     draw()
+  }
+  const handleMousedown = (e: MouseEvent) => handleDown(getPointFromEvent(e))
+  const handleMousemove = (e: MouseEvent) => handleMove(getPointFromEvent(e))
+  const handleMouseup = (e: MouseEvent) => handleUp(getPointFromEvent(e))
+  const handleTouchstart = (event: TouchEvent) => {
+    const touch = event.touches[0]
+    if (!touch) {
+      return
+    }
+    return handleDown(getPointFromTouch(touch))
+  }
+  const handleTouchmove = (event: TouchEvent) => {
+    const touch = event.touches[0]
+    if (!touch) {
+      return
+    }
+    return handleMove(getPointFromTouch(touch))
+  }
+  const handleTouchend = (event: TouchEvent) => {
+    console.log(event)
+    return handleUp()
   }
 </script>
 
@@ -232,6 +256,8 @@
   on:resize={handleResize}
   on:mousemove={handleMousemove}
   on:mouseup={handleMouseup}
+  on:touchmove|preventDefault|nonpassive={handleTouchmove}
+  on:touchend={handleTouchend}
 />
 
 <main>
@@ -241,8 +267,9 @@
     height={canvasHeight}
     style="cursor: {canvasCursor}"
     on:mousedown={handleMousedown}
+    on:touchstart={handleTouchstart}
   />
-  <div class="tool-select">
+  <div class="tool-select" on:mousedown|stopPropagation="" on:touchstart|stopPropagation="">
     <label>
       <select bind:value={currentToolName}>
         {#each tools as tool}
