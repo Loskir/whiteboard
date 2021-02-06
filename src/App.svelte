@@ -268,6 +268,7 @@
     style="cursor: {canvasCursor}"
     on:mousedown|passive={handleMousedown}
     on:touchstart|passive={handleTouchstart}
+    on:contextmenu={handleMouseup}
   />
   <div class="tool-select" on:mousedown|stopPropagation="" on:touchstart|passive|stopPropagation="">
     <label>
