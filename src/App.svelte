@@ -63,6 +63,7 @@
         return // the same as the previous point
       }
       currentLine.points.push(localPoint)
+      draw()
     }
 
     onUp() {
@@ -122,6 +123,7 @@
         return
       }
       this.updatePan(point)
+      draw()
     }
 
     onUp(point: GlobalPoint) {
@@ -189,8 +191,7 @@
     return currentTool.onDown(point)
   }
   const handleMove = (point: Point) => {
-    currentTool.onMove(point)
-    draw()
+    return currentTool.onMove(point)
   }
   const handleUp = (point: Point) => {
     return currentTool.onUp(point)
