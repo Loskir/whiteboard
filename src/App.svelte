@@ -42,6 +42,10 @@
     currentLineIndex: number
 
     onDown(point: GlobalPoint) {
+      if (this.isDown) {
+        console.warn('Already down')
+        return
+      }
       this.isDown = true
       this.currentLineIndex = lines.length
       lines.push({
@@ -111,6 +115,10 @@
     }
 
     onDown(point: GlobalPoint) {
+      if (this.isDown) {
+        console.warn('Already down')
+        return
+      }
       this.isDown = true
       this.initialPanX = panX
       this.initialPanY = panY
