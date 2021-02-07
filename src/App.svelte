@@ -30,20 +30,23 @@
 
   let currentToolName = 'pencil'
 
-  interface Tool {
-    name: string
-    cursor?: string
+  abstract class Tool {
+    name: string = 'Abstract tool'
+    cursor: string = 'default'
 
-    onDown(point: Point): void
+    onDown(point: Point): void {
+    }
 
-    onMove(point: Point): void
+    onMove(point: Point): void {
+    }
 
-    onUp(point?: Point): void
+    onUp(point?: Point): void {
+    }
   }
 
-  class Pencil implements Tool {
-    name: string = 'pencil'
-    cursor: string = 'crosshair'
+  class Pencil extends Tool {
+    name = 'pencil'
+    cursor = 'crosshair'
     isDown: boolean
     currentLineIndex: number
 
@@ -114,9 +117,9 @@
     }
   }
 
-  class Pan implements Tool {
-    name: string = 'pan'
-    cursor: string = 'move'
+  class Pan extends Tool {
+    name = 'pan'
+    cursor = 'move'
     isDown: boolean
     initialPanX: number
     initialPanY: number
@@ -284,7 +287,7 @@
       ctx.stroke()
       ctx.beginPath()
       const r = point.width / 2 * 0.8
-      ctx.arc(globalPoint.x, globalPoint.y, r, 0, 2*Math.PI)
+      ctx.arc(globalPoint.x, globalPoint.y, r, 0, 2 * Math.PI)
       ctx.fill()
     }
   }
