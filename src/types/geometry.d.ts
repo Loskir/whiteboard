@@ -2,9 +2,12 @@ export interface Point {
   x: number
   y: number
 }
+export type LinePoint = Point & {
+  width: number
+}
 export type Line = {
   color: string
-  points: Point[]
+  points: LinePoint[]
 }
 export type Segment = {
   start: Point

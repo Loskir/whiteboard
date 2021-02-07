@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    onMount,
     tick,
   } from 'svelte'
 
@@ -9,6 +10,11 @@
     GlobalPoint,
     LocalPoint,
   } from './types/geometry'
+
+  let isMounted = false
+  onMount(() => {
+    isMounted = true
+  })
 
   let canvas
 
@@ -41,7 +47,7 @@
     isDown: boolean
     currentLineIndex: number
 
-    onDown(point: GlobalPoint) {
+    onDown({ x, y, force = 0.25 }) {
       if (this.isDown) {
         console.warn('Already down')
         return
@@ -50,15 +56,17 @@
       this.currentLineIndex = lines.length
       lines.push({
         color: `hsl(${Math.floor(Math.random() * 360)}, 50%, 50%)`,
-        points: [convertGlobalToLocal(point)],
+        points: [
+          { x: convertGlobalToLocalX(x), y: convertGlobalToLocalY(y), width: 1 + force * 4 },
+        ],
       })
     }
 
-    onMove(point: GlobalPoint) {
+    onMove({ x, y, force = 0.25 }) {
       if (!this.isDown) {
         return
       }
-      const localPoint = convertGlobalToLocal(point)
+      const localPoint = { x: convertGlobalToLocalX(x), y: convertGlobalToLocalY(y), width: 1 + force * 4 }
       const currentLine = lines[this.currentLineIndex]
       if (currentLine.points.length === 0) {
         currentLine.points.push(localPoint)
@@ -98,6 +106,7 @@
         }
         newLine.points.push(currentLine.points[currentLine.points.length - 1])
         lines[this.currentLineIndex] = newLine
+        console.log(`${currentLine.points.length} → ${newLine.points.length} points`)
       }
       this.currentLineIndex = -1
       console.log(lines)
@@ -178,6 +187,80 @@
     y: convertLocalToGlobalY(point.y),
   })
 
+  const isOutOfBounds = ({ x, y }: GlobalPoint) => {
+    const P = 10
+    return (x < -P || x > canvasWidth + P || y < -P || y > canvasHeight + P)
+  }
+
+  const drawLine = (ctx: CanvasRenderingContext2D, line: Line) => {
+    ctx.strokeStyle = line.color
+    if (line.points.length === 0) {
+      return
+    }
+    ctx.beginPath()
+    ctx.moveTo(
+      convertLocalToGlobalX(line.points[0].x),
+      convertLocalToGlobalY(line.points[0].y),
+    )
+    for (let i = 1; i < line.points.length; ++i) {
+      const point = line.points[i]
+      ctx.lineTo(
+        convertLocalToGlobalX(point.x),
+        convertLocalToGlobalY(point.y),
+      )
+    }
+    ctx.stroke()
+  }
+  const drawLineOptimized = (ctx: CanvasRenderingContext2D, line: Line) => {
+    ctx.strokeStyle = line.color
+    if (line.points.length === 0) {
+      return
+    }
+    ctx.beginPath()
+    ctx.moveTo(
+      convertLocalToGlobalX(line.points[0].x),
+      convertLocalToGlobalY(line.points[0].y),
+    )
+    for (let i = 1; i < line.points.length; ++i) {
+      const point = line.points[i]
+      const globalPoint: GlobalPoint = convertLocalToGlobal(point)
+      const prevGlobalPoint = convertLocalToGlobal(line.points[i - 1])
+      const nextPoint = line.points[i + 1]
+      if (isOutOfBounds(prevGlobalPoint) && isOutOfBounds(globalPoint) && nextPoint && isOutOfBounds(convertLocalToGlobal(nextPoint))) {
+        continue
+      }
+      ctx.lineTo(globalPoint.x, globalPoint.y)
+    }
+    ctx.stroke()
+  }
+  const drawLineVariableWidthOptimized = (ctx: CanvasRenderingContext2D, line: Line) => {
+    ctx.strokeStyle = line.color
+    if (line.points.length === 0) {
+      return
+    }
+    for (let i = 1; i < line.points.length; ++i) {
+      const point = line.points[i]
+      const globalPoint: GlobalPoint = convertLocalToGlobal(point)
+      const prevGlobalPoint = convertLocalToGlobal(line.points[i - 1])
+      const nextPoint = line.points[i + 1]
+      if (isOutOfBounds(prevGlobalPoint) && isOutOfBounds(globalPoint) && nextPoint && isOutOfBounds(convertLocalToGlobal(nextPoint))) {
+        continue
+      }
+      ctx.beginPath()
+      ctx.lineWidth = point.width
+      ctx.moveTo(prevGlobalPoint.x, prevGlobalPoint.y)
+      ctx.lineTo(globalPoint.x, globalPoint.y)
+      ctx.stroke()
+    }
+  }
+
+  const drawMethods = {
+    default: drawLine,
+    optimized: drawLineOptimized,
+    variableWidth: drawLineVariableWidthOptimized,
+  }
+  let currentDrawMethod = 'default'
+
   const draw = () => {
     const ctx: CanvasRenderingContext2D = canvas.getContext('2d')
     ctx.clearRect(0, 0, canvasWidth, canvasHeight)
@@ -185,24 +268,19 @@
     ctx.lineJoin = 'round'
     ctx.lineCap = 'round'
     lines.forEach((line) => {
-      ctx.strokeStyle = line.color
-      if (line.points.length === 0) {
-        return
+      let method = drawMethods[currentDrawMethod]
+      if (!method) {
+        console.warn('Draw method not found, fallback to default')
+        method = drawLine
       }
-      ctx.beginPath()
-      ctx.moveTo(
-        convertLocalToGlobalX(line.points[0].x),
-        convertLocalToGlobalY(line.points[0].y),
-      )
-      for (let i = 1; i < line.points.length; ++i) {
-        const point = line.points[i]
-        ctx.lineTo(
-          convertLocalToGlobalX(point.x),
-          convertLocalToGlobalY(point.y),
-        )
-      }
-      ctx.stroke()
+      method(ctx, line)
     })
+  }
+  $: {
+    if (isMounted) {
+      currentDrawMethod
+      draw()
+    }
   }
 
   const handleDown = (point: Point) => {
@@ -219,9 +297,10 @@
     x: event.pageX - canvas.offsetLeft,
     y: event.pageY - canvas.offsetTop,
   })
-  const getPointFromTouch = (touch: Touch): GlobalPoint => ({
+  const getPointFromTouch = (touch: Touch) => ({
     x: touch.pageX - canvas.offsetLeft,
     y: touch.pageY - canvas.offsetTop,
+    ...touch.force && { force: touch.force },
   })
 
   const handleResize = async () => {
@@ -262,10 +341,9 @@
     if (!touch) {
       return
     }
-    return handleMove(getPointFromTouch(touch))
+    return currentTool.onMove(getPointFromTouch(touch))
   }
   const handleTouchend = (event: TouchEvent) => {
-    console.log(event)
     return handleUp()
   }
 </script>
@@ -274,7 +352,7 @@
   on:resize={handleResize}
   on:mousemove={handleMousemove}
   on:mouseup={handleMouseup}
-  on:touchmove|preventDefault|nonpassive={handleTouchmove}
+  on:touchmove|passive={handleTouchmove}
   on:touchend={handleTouchend}
 />
 
@@ -284,12 +362,21 @@
     width={canvasWidth}
     height={canvasHeight}
     style="cursor: {canvasCursor}"
-    on:mousedown|passive={handleMousedown}
+    on:mousedown={handleMousedown}
     on:touchstart|passive={handleTouchstart}
     on:contextmenu|preventDefault|stopPropagation=""
   />
-  <div class="tool-select" on:mousedown|stopPropagation="" on:touchstart|passive|stopPropagation="">
+  <div class="controls" on:mousedown|stopPropagation="" on:touchstart|passive|stopPropagation="">
     <label>
+      Draw method:
+      <select bind:value={currentDrawMethod}>
+        {#each Object.keys(drawMethods) as drawMethodName}
+          <option value={drawMethodName}>{drawMethodName}</option>
+        {/each}
+      </select>
+    </label>
+    <label>
+      Tool:
       <select bind:value={currentToolName}>
         {#each tools as tool}
           <option value={tool.name}>{tool.name}</option>
@@ -306,8 +393,11 @@
     justify-content center
     align-items center
 
-  .tool-select
+  .controls
     position fixed
     top 0
     right 0
+    display flex
+    flex-direction column
+    align-items flex-end
 </style>
