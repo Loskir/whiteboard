@@ -193,6 +193,9 @@
   }
 
   const drawLine = (ctx: CanvasRenderingContext2D, line: Line) => {
+    ctx.lineWidth = 2
+    ctx.lineJoin = 'round'
+    ctx.lineCap = 'round'
     ctx.strokeStyle = line.color
     if (line.points.length === 0) {
       return
@@ -212,6 +215,9 @@
     ctx.stroke()
   }
   const drawLineOptimized = (ctx: CanvasRenderingContext2D, line: Line) => {
+    ctx.lineWidth = 2
+    ctx.lineJoin = 'round'
+    ctx.lineCap = 'round'
     ctx.strokeStyle = line.color
     if (line.points.length === 0) {
       return
@@ -235,6 +241,8 @@
   }
   const drawLineVariableWidthOptimized = (ctx: CanvasRenderingContext2D, line: Line) => {
     ctx.strokeStyle = line.color
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
     if (line.points.length === 0) {
       return
     }
@@ -253,20 +261,45 @@
       ctx.stroke()
     }
   }
+  const drawLineVariableWidthOptimized2 = (ctx: CanvasRenderingContext2D, line: Line) => {
+    ctx.strokeStyle = line.color
+    ctx.fillStyle = line.color
+    ctx.lineCap = 'butt'
+    ctx.lineJoin = 'bevel'
+    if (line.points.length === 0) {
+      return
+    }
+    for (let i = 1; i < line.points.length; ++i) {
+      const point = line.points[i]
+      const globalPoint: GlobalPoint = convertLocalToGlobal(point)
+      const prevGlobalPoint = convertLocalToGlobal(line.points[i - 1])
+      const nextPoint = line.points[i + 1]
+      if (isOutOfBounds(prevGlobalPoint) && isOutOfBounds(globalPoint) && nextPoint && isOutOfBounds(convertLocalToGlobal(nextPoint))) {
+        continue
+      }
+      ctx.beginPath()
+      ctx.lineWidth = point.width
+      ctx.moveTo(prevGlobalPoint.x, prevGlobalPoint.y)
+      ctx.lineTo(globalPoint.x, globalPoint.y)
+      ctx.stroke()
+      ctx.beginPath()
+      const r = point.width / 2 * 0.8
+      ctx.arc(globalPoint.x, globalPoint.y, r, 0, 2*Math.PI)
+      ctx.fill()
+    }
+  }
 
   const drawMethods = {
     default: drawLine,
     optimized: drawLineOptimized,
     variableWidth: drawLineVariableWidthOptimized,
+    variableWidth2: drawLineVariableWidthOptimized2,
   }
   let currentDrawMethod = 'default'
 
   const draw = () => {
     const ctx: CanvasRenderingContext2D = canvas.getContext('2d')
     ctx.clearRect(0, 0, canvasWidth, canvasHeight)
-    ctx.lineWidth = 2
-    ctx.lineJoin = 'round'
-    ctx.lineCap = 'round'
     lines.forEach((line) => {
       let method = drawMethods[currentDrawMethod]
       if (!method) {
