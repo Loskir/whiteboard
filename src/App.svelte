@@ -10,20 +10,26 @@
     GlobalPoint,
     LocalPoint,
   } from './types/geometry'
+  import {getCurrentPixelRatio} from './functions/canvas'
 
   let isMounted = false
-  onMount(() => {
-    isMounted = true
-  })
+
+  const dpr = getCurrentPixelRatio()
 
   let canvas
 
-  let canvasWidth = document.body.clientWidth
-  let canvasHeight = document.body.clientHeight
+  let canvasPixelWidth = 0
+  let canvasPixelHeight = 0
+  let canvasWidth = 0
+  let canvasHeight = 0
 
   const updateCanvasSize = () => {
-    canvasWidth = document.body.clientWidth
-    canvasHeight = document.body.clientHeight
+    canvasPixelWidth = document.body.clientWidth
+    canvasPixelHeight = document.body.clientHeight
+  }
+  $: {
+    canvasWidth = canvasPixelWidth * dpr
+    canvasHeight = canvasPixelHeight * dpr
   }
 
   const lines: Line[] = []
@@ -192,11 +198,11 @@
 
   const isOutOfBounds = ({ x, y }: GlobalPoint) => {
     const P = 10
-    return (x < -P || x > canvasWidth + P || y < -P || y > canvasHeight + P)
+    return (x < -P || x > canvasPixelWidth + P || y < -P || y > canvasPixelHeight + P)
   }
 
   const drawLine = (ctx: CanvasRenderingContext2D, line: Line) => {
-    ctx.lineWidth = 2
+    ctx.lineWidth = 2 * dpr
     ctx.lineJoin = 'round'
     ctx.lineCap = 'round'
     ctx.strokeStyle = line.color
@@ -205,20 +211,20 @@
     }
     ctx.beginPath()
     ctx.moveTo(
-      convertLocalToGlobalX(line.points[0].x),
-      convertLocalToGlobalY(line.points[0].y),
+      convertLocalToGlobalX(line.points[0].x) * dpr,
+      convertLocalToGlobalY(line.points[0].y) * dpr,
     )
     for (let i = 1; i < line.points.length; ++i) {
       const point = line.points[i]
       ctx.lineTo(
-        convertLocalToGlobalX(point.x),
-        convertLocalToGlobalY(point.y),
+        convertLocalToGlobalX(point.x) * dpr,
+        convertLocalToGlobalY(point.y) * dpr,
       )
     }
     ctx.stroke()
   }
   const drawLineOptimized = (ctx: CanvasRenderingContext2D, line: Line) => {
-    ctx.lineWidth = 2
+    ctx.lineWidth = 2 * dpr
     ctx.lineJoin = 'round'
     ctx.lineCap = 'round'
     ctx.strokeStyle = line.color
@@ -227,8 +233,8 @@
     }
     ctx.beginPath()
     ctx.moveTo(
-      convertLocalToGlobalX(line.points[0].x),
-      convertLocalToGlobalY(line.points[0].y),
+      convertLocalToGlobalX(line.points[0].x) * dpr,
+      convertLocalToGlobalY(line.points[0].y) * dpr,
     )
     for (let i = 1; i < line.points.length; ++i) {
       const point = line.points[i]
@@ -238,7 +244,7 @@
       if (isOutOfBounds(prevGlobalPoint) && isOutOfBounds(globalPoint) && nextPoint && isOutOfBounds(convertLocalToGlobal(nextPoint))) {
         continue
       }
-      ctx.lineTo(globalPoint.x, globalPoint.y)
+      ctx.lineTo(globalPoint.x * dpr, globalPoint.y * dpr)
     }
     ctx.stroke()
   }
@@ -258,9 +264,9 @@
         continue
       }
       ctx.beginPath()
-      ctx.lineWidth = point.width
-      ctx.moveTo(prevGlobalPoint.x, prevGlobalPoint.y)
-      ctx.lineTo(globalPoint.x, globalPoint.y)
+      ctx.lineWidth = point.width * dpr
+      ctx.moveTo(prevGlobalPoint.x * dpr, prevGlobalPoint.y * dpr)
+      ctx.lineTo(globalPoint.x * dpr, globalPoint.y * dpr)
       ctx.stroke()
     }
   }
@@ -281,13 +287,13 @@
         continue
       }
       ctx.beginPath()
-      ctx.lineWidth = point.width
-      ctx.moveTo(prevGlobalPoint.x, prevGlobalPoint.y)
-      ctx.lineTo(globalPoint.x, globalPoint.y)
+      ctx.lineWidth = point.width * dpr
+      ctx.moveTo(prevGlobalPoint.x * dpr, prevGlobalPoint.y * dpr)
+      ctx.lineTo(globalPoint.x * dpr, globalPoint.y * dpr)
       ctx.stroke()
       ctx.beginPath()
       const r = point.width / 2 * 0.8
-      ctx.arc(globalPoint.x, globalPoint.y, r, 0, 2 * Math.PI)
+      ctx.arc(globalPoint.x * dpr, globalPoint.y * dpr, r * dpr, 0, 2 * Math.PI)
       ctx.fill()
     }
   }
@@ -397,7 +403,7 @@
     bind:this={canvas}
     width={canvasWidth}
     height={canvasHeight}
-    style="cursor: {canvasCursor}"
+    style="cursor: {canvasCursor}; width: {canvasPixelWidth}px; height: {canvasPixelHeight}px"
     on:mousedown={handleMousedown}
     on:touchstart|passive={handleTouchstart}
     on:contextmenu|preventDefault|stopPropagation=""
