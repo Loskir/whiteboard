@@ -278,6 +278,12 @@
     if (line.points.length === 0) {
       return
     }
+    {
+      const point = line.points[0]
+      const globalPoint: GlobalPoint = convertLocalToGlobal(point)
+      const r = point.width / 2 * 0.9
+      ctx.arc(globalPoint.x * dpr, globalPoint.y * dpr, r * dpr, 0, 2 * Math.PI)
+    }
     for (let i = 1; i < line.points.length; ++i) {
       const point = line.points[i]
       const globalPoint: GlobalPoint = convertLocalToGlobal(point)
@@ -292,7 +298,7 @@
       ctx.lineTo(globalPoint.x * dpr, globalPoint.y * dpr)
       ctx.stroke()
       ctx.beginPath()
-      const r = point.width / 2 * 0.8
+      const r = point.width / 2 * 0.9
       ctx.arc(globalPoint.x * dpr, globalPoint.y * dpr, r * dpr, 0, 2 * Math.PI)
       ctx.fill()
     }
