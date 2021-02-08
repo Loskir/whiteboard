@@ -129,6 +129,7 @@
     updatePan(point: GlobalPoint) {
       panX = this.initialPanX + (point.x - this.downX)
       panY = this.initialPanY + (point.y - this.downY)
+      draw()
     }
 
     onDown(point: GlobalPoint) {
@@ -148,7 +149,6 @@
         return
       }
       this.updatePan(point)
-      draw()
     }
 
     onUp(point?: GlobalPoint) {
