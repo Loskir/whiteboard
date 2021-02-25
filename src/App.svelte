@@ -10,11 +10,10 @@
     GlobalPoint,
     LocalPoint,
   } from './types/geometry'
-  import {getCurrentPixelRatio} from './functions/canvas'
 
   let isMounted = false
 
-  const dpr = getCurrentPixelRatio()
+  const dpr = window.devicePixelRatio || 1
 
   let canvas
 
