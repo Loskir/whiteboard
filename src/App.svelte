@@ -34,19 +34,41 @@
 
   const lines: Line[] = []
 
+  let selectedMainToolName = 'pencil'
   let currentToolName = 'pencil'
+  $: {
+    currentToolName = selectedMainToolName
+  }
 
   abstract class Tool {
     name: string = 'Abstract tool'
     cursor: string = 'default'
 
-    onDown(point: Point): void {
+    protected onDown(point: Point): void {
     }
 
-    onMove(point: Point): void {
+    protected onMove(point: Point): void {
     }
 
-    onUp(point?: Point): void {
+    protected onUp(point?: Point): void {
+    }
+
+    onMousedown(event: MouseEvent): void {
+    }
+
+    onMousemove(event: MouseEvent): void {
+    }
+
+    onMouseup(event: MouseEvent): void {
+    }
+
+    onTouchstart(event: TouchEvent): void {
+    }
+
+    onTouchmove(event: TouchEvent): void {
+    }
+
+    onTouchend(event: TouchEvent): void {
     }
   }
 
@@ -56,7 +78,7 @@
     isDown: boolean
     currentLineIndex: number
 
-    onDown({ x, y, force = 0.25 }) {
+    protected onDown({ x, y, force = 0.25 }) {
       if (this.isDown) {
         console.warn('Already down')
         return
@@ -66,12 +88,12 @@
       lines.push({
         color: `hsl(${Math.floor(Math.random() * 360)}, 50%, 50%)`,
         points: [
-          { x: convertGlobalToLocalX(x), y: convertGlobalToLocalY(y), width: 1 + force * 4 },
+          // { x: convertGlobalToLocalX(x), y: convertGlobalToLocalY(y), width: 1 + force * 4 },
         ],
       })
     }
 
-    onMove({ x, y, force = 0.25 }) {
+    protected onMove({ x, y, force = 0.25 }) {
       if (!this.isDown) {
         return
       }
@@ -88,7 +110,7 @@
       draw()
     }
 
-    onUp() {
+    protected onUp() {
       if (!this.isDown) {
         return
       }
@@ -121,6 +143,38 @@
       console.log(lines)
       draw()
     }
+
+    onMousedown(event: MouseEvent) {
+      this.onDown(getPointFromEvent(event))
+    }
+
+    onMousemove(event: MouseEvent) {
+      this.onMove(getPointFromEvent(event))
+    }
+
+    onMouseup() {
+      this.onUp()
+    }
+
+    onTouchstart(event: TouchEvent) {
+      const touch = event.touches[0]
+      if (!touch) {
+        return
+      }
+      this.onDown(getPointFromTouch(touch))
+    }
+
+    onTouchmove(event: TouchEvent) {
+      const touch = event.touches[0]
+      if (!touch) {
+        return
+      }
+      this.onMove(getPointFromTouch(touch))
+    }
+
+    onTouchend(event: TouchEvent) {
+      this.onUp()
+    }
   }
 
   class Pan extends Tool {
@@ -138,7 +192,7 @@
       draw()
     }
 
-    onDown(point: GlobalPoint) {
+    protected onDown(point: GlobalPoint) {
       if (this.isDown) {
         console.warn('Already down')
         return
@@ -150,14 +204,14 @@
       this.downY = point.y
     }
 
-    onMove(point: GlobalPoint) {
+    protected onMove(point: GlobalPoint) {
       if (!this.isDown) {
         return
       }
       this.updatePan(point)
     }
 
-    onUp(point?: GlobalPoint) {
+    protected onUp(point?: GlobalPoint) {
       if (!this.isDown) {
         return
       }
@@ -165,6 +219,38 @@
       if (point) {
         this.updatePan(point)
       }
+    }
+
+    onMousedown(event: MouseEvent): void {
+      this.onDown(getPointFromEvent(event))
+    }
+
+    onMousemove(event: MouseEvent) {
+      this.onMove(getPointFromEvent(event))
+    }
+
+    onMouseup(event: MouseEvent) {
+      this.onUp(getPointFromEvent(event))
+    }
+
+    onTouchstart(event: TouchEvent) {
+      const touch = event.touches[0]
+      if (!touch) {
+        return
+      }
+      this.onDown(getPointFromTouch(touch))
+    }
+
+    onTouchmove(event: TouchEvent) {
+      const touch = event.touches[0]
+      if (!touch) {
+        return
+      }
+      this.onMove(getPointFromTouch(touch))
+    }
+
+    onTouchend(event: TouchEvent) {
+      this.onUp()
     }
   }
 
@@ -177,8 +263,7 @@
     toolsMap.set(tool.name, tool)
   }
 
-  $: currentTool = toolsMap.get(currentToolName)
-  $: canvasCursor = currentTool.cursor || 'default'
+  $: canvasCursor = toolsMap.get(currentToolName)?.cursor || 'default'
 
   let panX = 0
   let panY = 0
@@ -331,19 +416,10 @@
     }
   }
 
-  const handleDown = (point: Point) => {
-    return currentTool.onDown(point)
-  }
-  const handleMove = (point: Point) => {
-    return currentTool.onMove(point)
-  }
-  const handleUp = (point?: Point) => {
-    return currentTool.onUp(point)
-  }
-
-  const getPointFromEvent = (event: MouseEvent): GlobalPoint => ({
+  const getPointFromEvent = (event: MouseEvent) => ({
     x: event.pageX - canvas.offsetLeft,
     y: event.pageY - canvas.offsetTop,
+    ...event.webkitForce && { force: event.webkitForce - 1 },
   })
   const getPointFromTouch = (touch: Touch) => ({
     x: touch.pageX - canvas.offsetLeft,
@@ -356,62 +432,52 @@
     await tick()
     draw()
   }
-  const handleMousedown = (e: MouseEvent) => {
-    const point = getPointFromEvent(e)
-    if (e.button !== 0) {
-      return toolsMap.get('pan').onDown(point)
+  const handleMousedown = (event: MouseEvent) => {
+    if (event.button !== 0) {
+      currentToolName = 'pan'
     }
-    return currentTool.onDown(getPointFromEvent(e))
+    return toolsMap.get(currentToolName).onMousedown(event)
   }
-  const handleMousemove = (e: MouseEvent) => {
-    const point = getPointFromEvent(e)
-    if (e.button !== 0) {
-      return toolsMap.get('pan').onMove(point)
-    }
-    currentTool.onMove(point)
+  const handleMousemove = (event: MouseEvent) => {
+    toolsMap.get(currentToolName).onMousemove(event)
   }
-  const handleMouseup = (e: MouseEvent) => {
-    const point = getPointFromEvent(e)
-    if (e.button !== 0) {
-      return toolsMap.get('pan').onUp(point)
-    }
-    currentTool.onUp(point)
+  const handleMouseup = (event: MouseEvent) => {
+    toolsMap.get(currentToolName).onMouseup(event)
+    currentToolName = selectedMainToolName
   }
   const handleTouchstart = (event: TouchEvent) => {
-    const touch = event.touches[0]
-    if (!touch) {
-      return
-    }
-    return handleDown(getPointFromTouch(touch))
+    return toolsMap.get(currentToolName).onTouchstart(event)
   }
   const handleTouchmove = (event: TouchEvent) => {
-    const touch = event.touches[0]
-    if (!touch) {
-      return
-    }
-    return currentTool.onMove(getPointFromTouch(touch))
+    return toolsMap.get(currentToolName).onTouchmove(event)
   }
   const handleTouchend = (event: TouchEvent) => {
-    return handleUp()
+    return toolsMap.get(currentToolName).onTouchend(event)
   }
+
+  onMount(() => {
+    isMounted = true
+    updateCanvasSize()
+  })
 </script>
 
 <svelte:window
   on:resize={handleResize}
   on:mousemove={handleMousemove}
   on:mouseup={handleMouseup}
-  on:touchmove|passive={handleTouchmove}
+  on:touchmove|preventDefault={handleTouchmove}
   on:touchend={handleTouchend}
 />
 
 <main>
   <canvas
+    id="canvas"
     bind:this={canvas}
     width={canvasWidth}
     height={canvasHeight}
     style="cursor: {canvasCursor}; width: {canvasPixelWidth}px; height: {canvasPixelHeight}px"
     on:mousedown={handleMousedown}
-    on:touchstart|passive={handleTouchstart}
+    on:touchstart|preventDefault={handleTouchstart}
     on:contextmenu|preventDefault|stopPropagation=""
   />
   <div class="controls" on:mousedown|stopPropagation="" on:touchstart|passive|stopPropagation="">
@@ -425,7 +491,7 @@
     </label>
     <label>
       Tool:
-      <select bind:value={currentToolName}>
+      <select bind:value={selectedMainToolName}>
         {#each tools as tool}
           <option value={tool.name}>{tool.name}</option>
         {/each}
