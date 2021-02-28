@@ -33,6 +33,8 @@
 
   const lines: Line[] = []
 
+  let stylusOnlyMode = true
+
   let selectedMainToolName = 'pencil'
   let currentToolName = 'pencil'
   $: {
@@ -42,14 +44,17 @@
   abstract class Tool {
     name: string = 'Abstract tool'
     cursor: string = 'default'
+    isDown: boolean
 
-    protected onDown(point: Point): void {
+    touchIdentifier: number
+
+    onDown(point: Point): void {
     }
 
-    protected onMove(point: Point): void {
+    onMove(point: Point): void {
     }
 
-    protected onUp(point?: Point): void {
+    onUp(point?: Point): void {
     }
 
     onMousedown(event: MouseEvent): void {
@@ -61,23 +66,22 @@
     onMouseup(event: MouseEvent): void {
     }
 
-    onTouchstart(event: TouchEvent): void {
+    onTouchstart(touch: Touch): void {
     }
 
-    onTouchmove(event: TouchEvent): void {
+    onTouchmove(touch: Touch): void {
     }
 
-    onTouchend(event: TouchEvent): void {
+    onTouchend(touch: Touch): void {
     }
   }
 
   class Pencil extends Tool {
     name = 'pencil'
     cursor = 'crosshair'
-    isDown: boolean
     currentLineIndex: number
 
-    protected onDown({ x, y, force = 0.25 }) {
+    onDown({ x, y, force = 0.25 }) {
       if (this.isDown) {
         console.warn('Already down')
         return
@@ -92,7 +96,7 @@
       })
     }
 
-    protected onMove({ x, y, force = 0.25 }) {
+    onMove({ x, y, force = 0.25 }) {
       if (!this.isDown) {
         return
       }
@@ -109,7 +113,7 @@
       draw()
     }
 
-    protected onUp() {
+    onUp() {
       if (!this.isDown) {
         return
       }
@@ -155,23 +159,23 @@
       this.onUp()
     }
 
-    onTouchstart(event: TouchEvent) {
-      const touch = event.touches[0]
-      if (!touch) {
+    onTouchstart(touch: Touch) {
+      if (this.isDown) {
         return
       }
+      this.touchIdentifier = touch.identifier
       this.onDown(getPointFromTouch(touch))
     }
 
-    onTouchmove(event: TouchEvent) {
-      const touch = event.touches[0]
-      if (!touch) {
+    onTouchmove(touch: Touch) {
+      if (!this.isDown) {
         return
       }
       this.onMove(getPointFromTouch(touch))
     }
 
-    onTouchend(event: TouchEvent) {
+    onTouchend(touch: Touch) {
+      this.touchIdentifier = null
       this.onUp()
     }
   }
@@ -179,7 +183,6 @@
   class Pan extends Tool {
     name = 'pan'
     cursor = 'move'
-    isDown: boolean
     initialPanX: number
     initialPanY: number
     downX: number
@@ -191,7 +194,7 @@
       draw()
     }
 
-    protected onDown(point: GlobalPoint) {
+    onDown(point: GlobalPoint) {
       if (this.isDown) {
         console.warn('Already down')
         return
@@ -203,14 +206,14 @@
       this.downY = point.y
     }
 
-    protected onMove(point: GlobalPoint) {
+    onMove(point: GlobalPoint) {
       if (!this.isDown) {
         return
       }
       this.updatePan(point)
     }
 
-    protected onUp(point?: GlobalPoint) {
+    onUp(point?: GlobalPoint) {
       if (!this.isDown) {
         return
       }
@@ -232,23 +235,23 @@
       this.onUp(getPointFromEvent(event))
     }
 
-    onTouchstart(event: TouchEvent) {
-      const touch = event.touches[0]
-      if (!touch) {
+    onTouchstart(touch: Touch) {
+      if (this.isDown) {
         return
       }
+      this.touchIdentifier = touch.identifier
       this.onDown(getPointFromTouch(touch))
     }
 
-    onTouchmove(event: TouchEvent) {
-      const touch = event.touches[0]
-      if (!touch) {
+    onTouchmove(touch: Touch) {
+      if (!this.isDown) {
         return
       }
       this.onMove(getPointFromTouch(touch))
     }
 
-    onTouchend(event: TouchEvent) {
+    onTouchend(touch: Touch) {
+      this.touchIdentifier = null
       this.onUp()
     }
   }
@@ -418,7 +421,7 @@
   const getPointFromEvent = (event: MouseEvent) => ({
     x: event.pageX - canvas.offsetLeft,
     y: event.pageY - canvas.offsetTop,
-    ...event.webkitForce && { force: event.webkitForce - 1 },
+    ...(event as any).webkitForce && { force: (event as any).webkitForce - 1 },
   })
   const getPointFromTouch = (touch: Touch) => ({
     x: touch.pageX - canvas.offsetLeft,
@@ -445,13 +448,79 @@
     currentToolName = selectedMainToolName
   }
   const handleTouchstart = (event: TouchEvent) => {
-    return toolsMap.get(currentToolName).onTouchstart(event)
+    console.log(event)
+    if (stylusOnlyMode) {
+      const stylusTool = toolsMap.get(currentToolName)
+      const directTool = toolsMap.get('pan')
+      if (!stylusTool.isDown) {
+        const stylusTouch = [...event.changedTouches].find(
+          (touch: Touch) => touch.touchType === 'stylus',
+        )
+        stylusTouch && stylusTool.onTouchstart(stylusTouch)
+      }
+      if (!directTool.isDown) {
+        const directTouch = [...event.changedTouches].find(
+          (touch: Touch) => touch.touchType === 'direct',
+        )
+        directTouch && directTool.onTouchstart(directTouch)
+      }
+    } else {
+      const tool = toolsMap.get(currentToolName)
+      if (!tool.isDown) {
+        const touch = event.changedTouches.item(0)
+        touch && tool.onTouchstart(touch)
+      }
+    }
   }
   const handleTouchmove = (event: TouchEvent) => {
-    return toolsMap.get(currentToolName).onTouchmove(event)
+    console.log(event)
+    if (stylusOnlyMode) {
+      const stylusTool = toolsMap.get(currentToolName)
+      const directTool = toolsMap.get('pan')
+      if (stylusTool.isDown) {
+        const stylusTouch = [...event.changedTouches].find(
+          (touch: Touch) => touch.touchType === 'stylus' && touch.identifier === stylusTool.touchIdentifier,
+        )
+        stylusTouch && stylusTool.onTouchmove(stylusTouch)
+      }
+      if (directTool.isDown) {
+        const directTouch = [...event.changedTouches].find(
+          (touch: Touch) => touch.touchType === 'direct' && touch.identifier === directTool.touchIdentifier,
+        )
+        directTouch && directTool.onTouchmove(directTouch)
+      }
+    } else {
+      const tool = toolsMap.get(currentToolName)
+      if (tool.isDown) {
+        const touch = [...event.changedTouches].find((touch: Touch) => touch.identifier === tool.touchIdentifier)
+        touch && tool.onTouchmove(touch)
+      }
+    }
   }
   const handleTouchend = (event: TouchEvent) => {
-    return toolsMap.get(currentToolName).onTouchend(event)
+    console.log(event)
+    if (stylusOnlyMode) {
+      const stylusTool = toolsMap.get(currentToolName)
+      const directTool = toolsMap.get('pan')
+      if (stylusTool.isDown) {
+        const stylusTouch = [...event.changedTouches].find(
+          (touch: Touch) => touch.touchType === 'stylus' && touch.identifier === stylusTool.touchIdentifier,
+        )
+        stylusTouch && stylusTool.onTouchend(stylusTouch)
+      }
+      if (directTool.isDown) {
+        const directTouch = [...event.changedTouches].find(
+          (touch: Touch) => touch.touchType === 'direct' && touch.identifier === directTool.touchIdentifier,
+        )
+        directTouch && directTool.onTouchend(directTouch)
+      }
+    } else {
+      const tool = toolsMap.get(currentToolName)
+      if (tool.isDown) {
+        const touch = [...event.changedTouches].find((touch: Touch) => touch.identifier === tool.touchIdentifier)
+        touch && tool.onTouchend(touch)
+      }
+    }
   }
 
   onMount(() => {
@@ -466,6 +535,7 @@
   on:mouseup={handleMouseup}
   on:touchmove|preventDefault={handleTouchmove}
   on:touchend={handleTouchend}
+  on:touchcancel={handleTouchend}
 />
 
 <main>
