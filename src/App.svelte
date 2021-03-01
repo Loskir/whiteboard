@@ -270,10 +270,10 @@
   let panX = 0
   let panY = 0
 
-  const convertGlobalToLocalX = (x) => x - canvasWidth / 2 - panX
-  const convertGlobalToLocalY = (y) => y - canvasHeight / 2 - panY
-  const convertLocalToGlobalX = (x) => x + canvasWidth / 2 + panX
-  const convertLocalToGlobalY = (y) => y + canvasHeight / 2 + panY
+  const convertGlobalToLocalX = (x) => x - canvasPixelWidth / 2 - panX
+  const convertGlobalToLocalY = (y) => y - canvasPixelHeight / 2 - panY
+  const convertLocalToGlobalX = (x) => x + canvasPixelWidth / 2 + panX
+  const convertLocalToGlobalY = (y) => y + canvasPixelHeight / 2 + panY
   const convertGlobalToLocal = (point: GlobalPoint): LocalPoint => ({
     x: convertGlobalToLocalX(point.x),
     y: convertGlobalToLocalY(point.y),
