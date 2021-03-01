@@ -2,7 +2,10 @@
   import {
     onMount,
     tick,
+    onDestroy,
   } from 'svelte'
+  import {io} from 'socket.io-client'
+  import {nanoid} from 'nanoid/non-secure'
 
   import type {
     Point,
@@ -10,6 +13,8 @@
     GlobalPoint,
     LocalPoint,
   } from './types/geometry'
+
+  const socket = io('http://10.200.200.151:10000/?board=test')
 
   let isMounted = false
 
@@ -31,7 +36,7 @@
     canvasHeight = canvasPixelHeight * dpr
   }
 
-  const lines: Line[] = []
+  let lines: Line[] = []
 
   let stylusOnlyMode = true
 
@@ -89,6 +94,7 @@
       this.isDown = true
       this.currentLineIndex = lines.length
       lines.push({
+        id: nanoid(),
         color: `hsl(${Math.floor(Math.random() * 360)}, 50%, 50%)`,
         points: [
           // { x: convertGlobalToLocalX(x), y: convertGlobalToLocalY(y), width: 1 + force * 4 },
@@ -123,6 +129,7 @@
         lines.splice(this.currentLineIndex, 1) // "empty"
       } else if (currentLine.points.length > 2) {
         const newLine: Line = {
+          id: currentLine.id,
           color: currentLine.color,
           points: [
             currentLine.points[0],
@@ -140,6 +147,12 @@
         }
         newLine.points.push(currentLine.points[currentLine.points.length - 1])
         lines[this.currentLineIndex] = newLine
+        socket.emit('update', {
+          add: [{
+            stroke_id: currentLine.id,
+            content: JSON.stringify(currentLine),
+          }]
+        })
         console.log(`${currentLine.points.length} → ${newLine.points.length} points`)
       }
       this.currentLineIndex = -1
@@ -526,7 +539,29 @@
   onMount(() => {
     isMounted = true
     updateCanvasSize()
+    socket.on('update', (data) => {
+      console.log(data)
+      if (data.add) {
+        for (const stroke of data.add) {
+          lines.push(JSON.parse(stroke.content))
+        }
+      }
+      if (data.delete) {
+        for (const stroke of data.delete) {
+          lines = lines.filter((v) => v.id !== stroke.stroke_id)
+        }
+      }
+      draw()
+    })
   })
+  onDestroy(() => {
+    socket.disconnect()
+  })
+  const clear = () => {
+    socket.emit('update', {delete: lines.map((v) => ({stroke_id: v.id}))})
+    lines = []
+    draw()
+  }
 </script>
 
 <svelte:window
@@ -566,6 +601,7 @@
         {/each}
       </select>
     </label>
+    <button on:click={clear}>Clear</button>
   </div>
 </main>
 

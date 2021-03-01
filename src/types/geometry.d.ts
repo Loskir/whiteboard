@@ -6,6 +6,7 @@ export type LinePoint = Point & {
   width: number
 }
 export type Line = {
+  id: string
   color: string
   points: LinePoint[]
 }
