@@ -202,8 +202,8 @@
     downY: number
 
     updatePan(point: GlobalPoint) {
-      panX = this.initialPanX + (point.x - this.downX)
-      panY = this.initialPanY + (point.y - this.downY)
+      panX = this.initialPanX + (point.x - this.downX) / scale
+      panY = this.initialPanY + (point.y - this.downY) / scale
       draw()
     }
 
@@ -282,11 +282,12 @@
 
   let panX = 0
   let panY = 0
+  let scale = 1
 
-  const convertGlobalToLocalX = (x) => x - canvasPixelWidth / 2 - panX
-  const convertGlobalToLocalY = (y) => y - canvasPixelHeight / 2 - panY
-  const convertLocalToGlobalX = (x) => x + canvasPixelWidth / 2 + panX
-  const convertLocalToGlobalY = (y) => y + canvasPixelHeight / 2 + panY
+  const convertGlobalToLocalX = (x) => (x - canvasPixelWidth / 2) / scale - panX
+  const convertGlobalToLocalY = (y) => (y - canvasPixelHeight / 2)  / scale - panY
+  const convertLocalToGlobalX = (x) => (x + panX) * scale + canvasPixelWidth / 2
+  const convertLocalToGlobalY = (y) => (y + panY) * scale + canvasPixelHeight / 2
   const convertGlobalToLocal = (point: GlobalPoint): LocalPoint => ({
     x: convertGlobalToLocalX(point.x),
     y: convertGlobalToLocalY(point.y),
@@ -382,24 +383,24 @@
       const point = line.points[0]
       const globalPoint: GlobalPoint = convertLocalToGlobal(point)
       const r = point.width / 2 * 0.9
-      ctx.arc(globalPoint.x * dpr, globalPoint.y * dpr, r * dpr, 0, 2 * Math.PI)
+      ctx.arc(globalPoint.x * dpr, globalPoint.y * dpr, r * dpr * scale, 0, 2 * Math.PI)
     }
     for (let i = 1; i < line.points.length; ++i) {
       const point = line.points[i]
       const globalPoint: GlobalPoint = convertLocalToGlobal(point)
       const prevGlobalPoint = convertLocalToGlobal(line.points[i - 1])
-      const nextPoint = line.points[i + 1]
-      if (isOutOfBounds(prevGlobalPoint) && isOutOfBounds(globalPoint) && nextPoint && isOutOfBounds(convertLocalToGlobal(nextPoint))) {
-        continue
-      }
+      // const nextPoint = line.points[i + 1]
+      // if (isOutOfBounds(prevGlobalPoint) && isOutOfBounds(globalPoint) && nextPoint && isOutOfBounds(convertLocalToGlobal(nextPoint))) {
+      //   continue
+      // }
       ctx.beginPath()
-      ctx.lineWidth = point.width * dpr
+      ctx.lineWidth = point.width * dpr * scale
       ctx.moveTo(prevGlobalPoint.x * dpr, prevGlobalPoint.y * dpr)
       ctx.lineTo(globalPoint.x * dpr, globalPoint.y * dpr)
       ctx.stroke()
       ctx.beginPath()
-      const r = point.width / 2 * 0.9
-      ctx.arc(globalPoint.x * dpr, globalPoint.y * dpr, r * dpr, 0, 2 * Math.PI)
+      const r = point.width / 2
+      ctx.arc(globalPoint.x * dpr, globalPoint.y * dpr, r * dpr * scale, 0, 2 * Math.PI)
       ctx.fill()
     }
   }
@@ -460,17 +461,27 @@
     toolsMap.get(currentToolName).onMouseup(event)
     currentToolName = selectedMainToolName
   }
+  const handleMousewheel = (event: WheelEvent) => {
+    console.log(event)
+    const deltaScale = -(event.deltaY / 100)
+    scale *= 1 + deltaScale
+    const point = getPointFromEvent(event)
+    panX = panX - (point.x - canvasPixelWidth / 2) * deltaScale / scale
+    panY = panY - (point.y - canvasPixelHeight / 2) * deltaScale / scale
+    console.log(panX, panY)
+    draw()
+  }
   const handleTouchstart = (event: TouchEvent) => {
     console.log(event)
     if (stylusOnlyMode) {
       const stylusTool = toolsMap.get(currentToolName)
-      const directTool = toolsMap.get('pan')
       if (!stylusTool.isDown) {
         const stylusTouch = [...event.changedTouches].find(
           (touch: Touch) => touch.touchType === 'stylus',
         )
         stylusTouch && stylusTool.onTouchstart(stylusTouch)
       }
+      const directTool = toolsMap.get('pan')
       if (!directTool.isDown) {
         const directTouch = [...event.changedTouches].find(
           (touch: Touch) => touch.touchType === 'direct',
@@ -486,7 +497,7 @@
     }
   }
   const handleTouchmove = (event: TouchEvent) => {
-    console.log(event)
+    // console.log(event)
     if (stylusOnlyMode) {
       const stylusTool = toolsMap.get(currentToolName)
       const directTool = toolsMap.get('pan')
@@ -571,6 +582,7 @@
   on:touchmove|preventDefault={handleTouchmove}
   on:touchend={handleTouchend}
   on:touchcancel={handleTouchend}
+  on:mousewheel={handleMousewheel}
 />
 
 <main>
