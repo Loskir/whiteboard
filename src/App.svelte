@@ -151,7 +151,7 @@
           add: [{
             stroke_id: currentLine.id,
             content: JSON.stringify(currentLine),
-          }]
+          }],
         })
         console.log(`${currentLine.points.length} → ${newLine.points.length} points`)
       }
@@ -284,8 +284,9 @@
   let panY = 0
   let scale = 1
 
+  // local — on canvas (endless), global — on screen
   const convertGlobalToLocalX = (x) => (x - canvasPixelWidth / 2) / scale - panX
-  const convertGlobalToLocalY = (y) => (y - canvasPixelHeight / 2)  / scale - panY
+  const convertGlobalToLocalY = (y) => (y - canvasPixelHeight / 2) / scale - panY
   const convertLocalToGlobalX = (x) => (x + panX) * scale + canvasPixelWidth / 2
   const convertLocalToGlobalY = (y) => (y + panY) * scale + canvasPixelHeight / 2
   const convertGlobalToLocal = (point: GlobalPoint): LocalPoint => ({
@@ -443,6 +444,13 @@
     ...touch.force && { force: touch.force },
   })
 
+  function scaleBy(deltaScale, basePoint: GlobalPoint) {
+    scale *= 1 + deltaScale
+    panX = panX - (basePoint.x - canvasPixelWidth / 2) * deltaScale / scale
+    panY = panY - (basePoint.y - canvasPixelHeight / 2) * deltaScale / scale
+    draw()
+  }
+
   const handleResize = async () => {
     updateCanvasSize()
     await tick()
@@ -464,12 +472,7 @@
   const handleMousewheel = (event: WheelEvent) => {
     console.log(event)
     const deltaScale = -(event.deltaY / 100)
-    scale *= 1 + deltaScale
-    const point = getPointFromEvent(event)
-    panX = panX - (point.x - canvasPixelWidth / 2) * deltaScale / scale
-    panY = panY - (point.y - canvasPixelHeight / 2) * deltaScale / scale
-    console.log(panX, panY)
-    draw()
+    scaleBy(deltaScale, getPointFromEvent(event))
   }
   const handleTouchstart = (event: TouchEvent) => {
     console.log(event)
@@ -498,17 +501,18 @@
   }
   const handleTouchmove = (event: TouchEvent) => {
     // console.log(event)
+    const changedTouches = Array.from(event.changedTouches)
     if (stylusOnlyMode) {
       const stylusTool = toolsMap.get(currentToolName)
       const directTool = toolsMap.get('pan')
       if (stylusTool.isDown) {
-        const stylusTouch = [...event.changedTouches].find(
+        const stylusTouch = changedTouches.find(
           (touch: Touch) => touch.touchType === 'stylus' && touch.identifier === stylusTool.touchIdentifier,
         )
         stylusTouch && stylusTool.onTouchmove(stylusTouch)
       }
       if (directTool.isDown) {
-        const directTouch = [...event.changedTouches].find(
+        const directTouch = changedTouches.find(
           (touch: Touch) => touch.touchType === 'direct' && touch.identifier === directTool.touchIdentifier,
         )
         directTouch && directTool.onTouchmove(directTouch)
@@ -523,17 +527,18 @@
   }
   const handleTouchend = (event: TouchEvent) => {
     console.log(event)
+    const changedTouches = Array.from(event.changedTouches)
     if (stylusOnlyMode) {
       const stylusTool = toolsMap.get(currentToolName)
       const directTool = toolsMap.get('pan')
       if (stylusTool.isDown) {
-        const stylusTouch = [...event.changedTouches].find(
+        const stylusTouch = changedTouches.find(
           (touch: Touch) => touch.touchType === 'stylus' && touch.identifier === stylusTool.touchIdentifier,
         )
         stylusTouch && stylusTool.onTouchend(stylusTouch)
       }
       if (directTool.isDown) {
-        const directTouch = [...event.changedTouches].find(
+        const directTouch = changedTouches.find(
           (touch: Touch) => touch.touchType === 'direct' && touch.identifier === directTool.touchIdentifier,
         )
         directTouch && directTool.onTouchend(directTouch)
@@ -569,7 +574,7 @@
     socket.disconnect()
   })
   const clear = () => {
-    socket.emit('update', {delete: lines.map((v) => ({stroke_id: v.id}))})
+    socket.emit('update', { delete: lines.map((v) => ({ stroke_id: v.id })) })
     lines = []
     draw()
   }
