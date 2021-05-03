@@ -13,6 +13,7 @@
     GlobalPoint,
     LocalPoint,
   } from './types/geometry'
+  import {getDistance, middlePoint} from './functions/geometry'
 
   const socket = io('http://10.200.200.151:10000/?board=test')
 
@@ -53,31 +54,31 @@
 
     touchIdentifier: number
 
-    onDown(point: Point): void {
+    onDown(point?: Point): void {
     }
 
-    onMove(point: Point): void {
+    onMove(point?: Point): void {
     }
 
     onUp(point?: Point): void {
     }
 
-    onMousedown(event: MouseEvent): void {
+    onMousedown(event?: MouseEvent): void {
     }
 
-    onMousemove(event: MouseEvent): void {
+    onMousemove(event?: MouseEvent): void {
     }
 
-    onMouseup(event: MouseEvent): void {
+    onMouseup(event?: MouseEvent): void {
     }
 
-    onTouchstart(touch: Touch): void {
+    onTouchstart(touch?: Touch): void {
     }
 
-    onTouchmove(touch: Touch): void {
+    onTouchmove(touch?: Touch): void {
     }
 
-    onTouchend(touch: Touch): void {
+    onTouchend(touch?: Touch): void {
     }
   }
 
@@ -187,7 +188,7 @@
       this.onMove(getPointFromTouch(touch))
     }
 
-    onTouchend(touch: Touch) {
+    onTouchend(touch?: Touch) {
       this.touchIdentifier = null
       this.onUp()
     }
@@ -451,6 +452,71 @@
     draw()
   }
 
+  class TouchScaleController {
+    isDown = false
+    touchIdentifiers: [number, number]
+    initialPoints: [GlobalPoint, GlobalPoint]
+    previousPoints: [GlobalPoint, GlobalPoint]
+    initialScale: number
+    initialPanX: number
+    initialPanY: number
+    initialBasePoint: GlobalPoint
+
+    onStart(touches: [Touch, Touch]) {
+      this.isDown = true
+      this.touchIdentifiers = touches.map((v) => v.identifier)
+      this.initialPoints = touches.map((v) => getPointFromTouch(v))
+      this.previousPoints = this.initialPoints
+      this.initialScale = scale
+      this.initialPanX = panX
+      this.initialPanY = panY
+      this.initialBasePoint = middlePoint(this.initialPoints[0], this.initialPoints[1])
+    }
+
+    onMove(changedTouches: Touch[]) {
+      let newPoints: GlobalPoint[] = []
+      {
+        const touch = changedTouches.find((v) => v.identifier === this.touchIdentifiers[0])
+        if (touch) {
+          const point = getPointFromTouch(touch)
+          newPoints.push(point)
+        } else {
+          newPoints.push(this.previousPoints[0])
+        }
+      }
+      {
+        const touch = changedTouches.find((v) => v.identifier === this.touchIdentifiers[1])
+        if (touch) {
+          const point = getPointFromTouch(touch)
+          newPoints.push(point)
+        } else {
+          newPoints.push(this.previousPoints[1])
+        }
+      }
+      const relativeScale = getDistance(newPoints[0], newPoints[1]) / getDistance(this.initialPoints[0], this.initialPoints[1])
+      const deltaScale = relativeScale - 1
+      const newScale = this.initialScale * relativeScale
+      const basePoint: GlobalPoint = {
+        x: (newPoints[0].x + newPoints[1].x) / 2,
+        y: (newPoints[1].y + newPoints[0].y) / 2,
+      }
+      panX = this.initialPanX + (basePoint.x - this.initialBasePoint.x) / this.initialScale - (basePoint.x - canvasPixelWidth / 2) * deltaScale / newScale
+      panY = this.initialPanY + (basePoint.y - this.initialBasePoint.y) / this.initialScale - (basePoint.y - canvasPixelHeight / 2) * deltaScale / newScale
+      scale = newScale
+      console.log(scale, panX, panY)
+      draw()
+      this.previousPoints = newPoints
+    }
+
+    onEnd() {
+      this.isDown = false
+      this.touchIdentifiers = null
+      this.initialPoints = null
+    }
+  }
+
+  const touchScaleController = new TouchScaleController()
+
   const handleResize = async () => {
     updateCanvasSize()
     await tick()
@@ -476,16 +542,25 @@
   }
   const handleTouchstart = (event: TouchEvent) => {
     console.log(event)
+    const touches = Array.from(event.touches)
     if (stylusOnlyMode) {
       const stylusTool = toolsMap.get(currentToolName)
+      const directTool = toolsMap.get('pan')
       if (!stylusTool.isDown) {
         const stylusTouch = [...event.changedTouches].find(
           (touch: Touch) => touch.touchType === 'stylus',
         )
         stylusTouch && stylusTool.onTouchstart(stylusTouch)
       }
-      const directTool = toolsMap.get('pan')
-      if (!directTool.isDown) {
+      if (touches.filter((v) => v.touchType === 'direct').length === 2) {
+        if (directTool.isDown) {
+          const directTouch = touches.find(
+            (touch: Touch) => touch.touchType === 'direct' && touch.identifier === directTool.touchIdentifier,
+          )
+          directTool.onTouchend(directTouch)
+        }
+        touchScaleController.onStart(touches.filter((v) => v.touchType === 'direct'))
+      } else if (!directTool.isDown) {
         const directTouch = [...event.changedTouches].find(
           (touch: Touch) => touch.touchType === 'direct',
         )
@@ -517,6 +592,9 @@
         )
         directTouch && directTool.onTouchmove(directTouch)
       }
+      if (touchScaleController.isDown) {
+        touchScaleController.onMove(changedTouches)
+      }
     } else {
       const tool = toolsMap.get(currentToolName)
       if (tool.isDown) {
@@ -542,6 +620,15 @@
           (touch: Touch) => touch.touchType === 'direct' && touch.identifier === directTool.touchIdentifier,
         )
         directTouch && directTool.onTouchend(directTouch)
+      }
+      if (touchScaleController.isDown && changedTouches.find((v) => touchScaleController.touchIdentifiers.includes(v.identifier))) {
+        touchScaleController.onEnd()
+        if (!directTool.isDown) {
+          const directTouch = Array.from(event.touches).find(
+            (touch: Touch) => touch.touchType === 'direct' && !changedTouches.find((v) => v.identifier === touch.identifier),
+          )
+          directTouch && directTool.onTouchstart(directTouch)
+        }
       }
     } else {
       const tool = toolsMap.get(currentToolName)
