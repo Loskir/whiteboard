@@ -326,31 +326,6 @@
     }
     ctx.stroke()
   }
-  const drawLineOptimized = (ctx: CanvasRenderingContext2D, line: Line) => {
-    ctx.lineWidth = 2 * dpr
-    ctx.lineJoin = 'round'
-    ctx.lineCap = 'round'
-    ctx.strokeStyle = line.color
-    if (line.points.length === 0) {
-      return
-    }
-    ctx.beginPath()
-    ctx.moveTo(
-      convertLocalToGlobalX(line.points[0].x) * dpr,
-      convertLocalToGlobalY(line.points[0].y) * dpr,
-    )
-    for (let i = 1; i < line.points.length; ++i) {
-      const point = line.points[i]
-      const globalPoint: GlobalPoint = convertLocalToGlobal(point)
-      const prevGlobalPoint = convertLocalToGlobal(line.points[i - 1])
-      const nextPoint = line.points[i + 1]
-      if (isOutOfBounds(prevGlobalPoint) && isOutOfBounds(globalPoint) && nextPoint && isOutOfBounds(convertLocalToGlobal(nextPoint))) {
-        continue
-      }
-      ctx.lineTo(globalPoint.x * dpr, globalPoint.y * dpr)
-    }
-    ctx.stroke()
-  }
   const drawLineVariableWidthOptimized = (ctx: CanvasRenderingContext2D, line: Line) => {
     ctx.strokeStyle = line.color
     ctx.lineCap = 'round'
@@ -409,7 +384,6 @@
 
   const drawMethods = {
     default: drawLine,
-    optimized: drawLineOptimized,
     variableWidth: drawLineVariableWidthOptimized,
     variableWidth2: drawLineVariableWidthOptimized2,
   }
