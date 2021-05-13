@@ -199,6 +199,26 @@
       this.onUp()
     }
   }
+  class Eraser extends Pencil {
+    name = 'eraser'
+
+    onDown({ x, y, force = 0.25 }) {
+      if (this.isDown) {
+        console.warn('Already down')
+        return
+      }
+      this.isDown = true
+      this.currentLineIndex = lines.length
+      lines.push({
+        id: nanoid(),
+        color: 'white',
+        width: lineWidth,
+        points: [
+          // { x: convertGlobalToLocalX(x), y: convertGlobalToLocalY(y), width: 1 + force * 4 },
+        ],
+      })
+    }
+  }
 
   class Pan extends Tool {
     name = 'pan'
@@ -278,6 +298,7 @@
 
   const tools: Tool[] = [
     new Pencil(),
+    new Eraser(),
     new Pan(),
   ]
   const toolsMap = new Map<string, Tool>()
