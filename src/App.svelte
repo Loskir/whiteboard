@@ -96,7 +96,8 @@
       this.currentLineIndex = lines.length
       lines.push({
         id: nanoid(),
-        color: `hsl(${Math.floor(Math.random() * 360)}, 50%, 50%)`,
+        color: lineColor,
+        width: lineWidth,
         points: [
           // { x: convertGlobalToLocalX(x), y: convertGlobalToLocalY(y), width: 1 + force * 4 },
         ],
@@ -107,7 +108,11 @@
       if (!this.isDown) {
         return
       }
-      const localPoint = { x: convertGlobalToLocalX(x), y: convertGlobalToLocalY(y), width: 1 + force * 4 }
+      const localPoint = {
+        x: convertGlobalToLocalX(x),
+        y: convertGlobalToLocalY(y),
+        width: 1 + force * 4,
+      }
       const currentLine = lines[this.currentLineIndex]
       if (currentLine.points.length === 0) {
         currentLine.points.push(localPoint)
@@ -132,6 +137,7 @@
         const newLine: Line = {
           id: currentLine.id,
           color: currentLine.color,
+          width: currentLine.width,
           points: [
             currentLine.points[0],
           ],
@@ -285,6 +291,10 @@
   let panY = 0
   let scale = 1
 
+  let widthScaleInsensitive = false
+  let lineColor = '#000000'
+  let lineWidth = 1
+
   // local — on canvas (endless), global — on screen
   const convertGlobalToLocalX = (x) => (x - canvasPixelWidth / 2) / scale - panX
   const convertGlobalToLocalY = (y) => (y - canvasPixelHeight / 2) / scale - panY
@@ -305,7 +315,10 @@
   }
 
   const drawLine = (ctx: CanvasRenderingContext2D, line: Line) => {
-    ctx.lineWidth = 2 * dpr
+    ctx.lineWidth = 2 * dpr * line.width
+    if (!widthScaleInsensitive) {
+      ctx.lineWidth *= scale
+    }
     ctx.lineJoin = 'round'
     ctx.lineCap = 'round'
     ctx.strokeStyle = line.color
@@ -342,7 +355,10 @@
         continue
       }
       ctx.beginPath()
-      ctx.lineWidth = point.width * dpr
+      ctx.lineWidth = point.width * lineWidth * dpr
+      if (!widthScaleInsensitive) {
+        ctx.lineWidth *= scale
+      }
       ctx.moveTo(prevGlobalPoint.x * dpr, prevGlobalPoint.y * dpr)
       ctx.lineTo(globalPoint.x * dpr, globalPoint.y * dpr)
       ctx.stroke()
@@ -371,13 +387,19 @@
       //   continue
       // }
       ctx.beginPath()
-      ctx.lineWidth = point.width * dpr * scale
+      ctx.lineWidth = point.width * line.width * dpr
+      if (!widthScaleInsensitive) {
+        ctx.lineWidth *= scale
+      }
       ctx.moveTo(prevGlobalPoint.x * dpr, prevGlobalPoint.y * dpr)
       ctx.lineTo(globalPoint.x * dpr, globalPoint.y * dpr)
       ctx.stroke()
       ctx.beginPath()
-      const r = point.width / 2
-      ctx.arc(globalPoint.x * dpr, globalPoint.y * dpr, r * dpr * scale, 0, 2 * Math.PI)
+      let r = point.width * line.width * dpr / 2
+      if (!widthScaleInsensitive) {
+        r *= scale
+      }
+      ctx.arc(globalPoint.x * dpr, globalPoint.y * dpr, r, 0, 2 * Math.PI)
       ctx.fill()
     }
   }
@@ -639,6 +661,11 @@
     lines = []
     draw()
   }
+
+  const resetScale = () => {
+    scale = 1
+    draw()
+  }
 </script>
 
 <svelte:window
@@ -679,6 +706,27 @@
         {/each}
       </select>
     </label>
+    <label>
+      Color: {lineColor}
+      <input type="color" bind:value={lineColor}/>
+    </label>
+    <label>
+      Width:
+      <select bind:value={lineWidth}>
+        <option value={0.25}>1/4</option>
+        <option value={0.5}>1/2</option>
+        <option value={1}>1</option>
+        <option value={2}>2</option>
+        <option value={3}>3</option>
+        <option value={4}>4</option>
+        <option value={5}>5</option>
+      </select>
+    </label>
+    <label>
+      Scale insensitive line width
+      <input type="checkbox" bind:checked={widthScaleInsensitive} on:change={draw}/>
+    </label>
+    <span>Scale: {(scale * 100).toFixed(0)}% <button on:click={resetScale}>100%</button></span>
     <button on:click={clear}>Clear</button>
   </div>
 </main>

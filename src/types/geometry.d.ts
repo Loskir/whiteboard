@@ -8,6 +8,7 @@ export type LinePoint = Point & {
 export type Line = {
   id: string
   color: string
+  width: number
   points: LinePoint[]
 }
 export type Segment = {
