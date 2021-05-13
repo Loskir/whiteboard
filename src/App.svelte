@@ -409,7 +409,7 @@
     variableWidth: drawLineVariableWidthOptimized,
     variableWidth2: drawLineVariableWidthOptimized2,
   }
-  let currentDrawMethod = 'variableWidth2'
+  let currentDrawMethod = 'default'
 
   const draw = () => {
     const ctx: CanvasRenderingContext2D = canvas.getContext('2d')
