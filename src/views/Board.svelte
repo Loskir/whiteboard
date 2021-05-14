@@ -16,9 +16,8 @@
   import {getDistance, middlePoint} from '../functions/geometry'
 
   export let ctx
-  console.log(ctx)
 
-  let socket
+  const socket = io({ path: '/api/socket.io', query: { board: ctx.params.id } })
 
   let isMounted = false
 
@@ -202,6 +201,7 @@
       this.onUp()
     }
   }
+
   class Eraser extends Pencil {
     name = 'eraser'
 
@@ -662,7 +662,6 @@
   onMount(() => {
     isMounted = true
     updateCanvasSize()
-    socket = io(`http://10.200.200.151:10000/?board=${ctx.params.id}`)
     socket.on('update', (data) => {
       console.log(data)
       if (data.add) {
