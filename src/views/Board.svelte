@@ -12,8 +12,9 @@
     Line,
     GlobalPoint,
     LocalPoint,
+    Rectangle,
   } from '../types/geometry'
-  import {getDistance, middlePoint} from '../functions/geometry'
+  import {doesIntersect, getDistance, getLineBoundary, middlePoint} from '../functions/geometry'
 
   export let ctx
 
@@ -41,6 +42,20 @@
   }
 
   let lines: Line[] = []
+  let lineBoundaries: Rectangle[] = []
+
+  // $: lineBoundaries = lines.map((v) => getLineBoundary(v))
+
+  function addLine(line: Line) {
+    lines = [...lines, line]
+    lineBoundaries = [...lineBoundaries, getLineBoundary(line)]
+  }
+
+  function removeLine(lineId) {
+    const index = lines.findIndex((v) => v.id === lineId)
+    lines = [...lines.slice(0, index), ...lines.slice(index + 1)]
+    lineBoundaries = [...lineBoundaries.slice(0, index), ...lineBoundaries.slice(index + 1)]
+  }
 
   let stylusOnlyMode = true
 
@@ -156,7 +171,7 @@
           }
         }
         newLine.points.push(currentLine.points[currentLine.points.length - 1])
-        lines.push(newLine)
+        addLine(newLine)
         socket.emit('update', {
           add: [{
             stroke_id: currentLine.id,
@@ -165,7 +180,7 @@
         })
         console.log(`${currentLine.points.length} → ${newLine.points.length} points`)
       } else {
-        lines.push(currentLine)
+        addLine(currentLine)
       }
       console.log(lines)
       clearUnfinishedLineCanvas()
@@ -335,6 +350,16 @@
     y: convertLocalToGlobalY(point.y),
   })
 
+  function getBoundsRectangle(): Rectangle {
+    const boundsPadding = 10
+    return {
+      left: convertGlobalToLocalX(-boundsPadding),
+      top: convertGlobalToLocalY(-boundsPadding),
+      right: convertGlobalToLocalX(canvasPixelWidth + boundsPadding),
+      bottom: convertGlobalToLocalY(canvasPixelHeight + boundsPadding),
+    }
+  }
+
   const isOutOfBounds = ({ x, y }: GlobalPoint) => {
     const P = 10
     return (x < -P || x > canvasPixelWidth + P || y < -P || y > canvasPixelHeight + P)
@@ -365,7 +390,7 @@
     }
     ctx.stroke()
   }
-  const drawLineOptimized = (ctx: CanvasRenderingContext2D, line: Line) => {
+  const drawLineOptimized = (ctx: CanvasRenderingContext2D, line: Line, lineBoundary?: Rectangle, boundsRectangle?: Rectangle) => {
     ctx.lineWidth = 2 * dpr * line.width
     if (!widthScaleInsensitive) {
       ctx.lineWidth *= scale
@@ -376,7 +401,10 @@
     if (line.points.length === 0) {
       return
     }
-    ctx.beginPath()
+    if (lineBoundary && boundsRectangle && !doesIntersect(lineBoundary, boundsRectangle)) {
+      // console.log('skipping the line (boundary)')
+      return
+    }
     const globalPoints: GlobalPoint[] = line.points.map((v) => convertLocalToGlobal(v))
     const isOutOfBoundsResults = globalPoints.map((v) => isOutOfBounds(v))
     let beginIndex = 0
@@ -386,6 +414,7 @@
     if (beginIndex === globalPoints.length - 1) {
       return
     }
+    ctx.beginPath()
     ctx.moveTo(
       globalPoints[beginIndex].x * dpr,
       globalPoints[beginIndex].y * dpr,
@@ -475,14 +504,17 @@
   const draw = () => {
     const ctx: CanvasRenderingContext2D = canvas.getContext('2d')
     ctx.clearRect(0, 0, canvasWidth, canvasHeight)
-    lines.forEach((line) => {
-      let method = drawMethods[currentDrawMethod]
-      if (!method) {
-        console.warn('Draw method not found, fallback to default')
-        method = drawLine
-      }
-      method(ctx, line)
-    })
+    let method = drawMethods[currentDrawMethod]
+    if (!method) {
+      console.warn('Draw method not found, fallback to default')
+      method = drawLine
+    }
+    const boundsRectangle = getBoundsRectangle()
+    for (let i = 0; i < lines.length; ++i) {
+      const line = lines[i]
+      const lineBoundary = lineBoundaries[i]
+      method(ctx, line, lineBoundary, boundsRectangle)
+    }
   }
   const clearUnfinishedLineCanvas = () => {
     const ctx: CanvasRenderingContext2D = canvasForUnfinishedLine.getContext('2d')
@@ -722,7 +754,7 @@
       if (data.add) {
         for (const stroke of data.add) {
           try {
-            lines.push(JSON.parse(stroke.content))
+            addLine(JSON.parse(stroke.content))
           } catch (e) {
             console.warn('Unable to parse stroke')
             console.warn(stroke.content)
@@ -731,7 +763,7 @@
       }
       if (data.delete) {
         for (const stroke of data.delete) {
-          lines = lines.filter((v) => v.id !== stroke.stroke_id)
+          removeLine(stroke.stroke_id)
         }
       }
       draw()
@@ -743,6 +775,7 @@
   const clear = () => {
     socket.emit('update', { delete: lines.map((v) => ({ stroke_id: v.id })) })
     lines = []
+    lineBoundaries = []
     draw()
   }
 
