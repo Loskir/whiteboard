@@ -682,7 +682,12 @@
       console.log(data)
       if (data.add) {
         for (const stroke of data.add) {
-          lines.push(JSON.parse(stroke.content))
+          try {
+            lines.push(JSON.parse(stroke.content))
+          } catch (e) {
+            console.warn("Unable to parse stroke")
+            console.warn(stroke.content)
+          }
         }
       }
       if (data.delete) {
