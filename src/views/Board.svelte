@@ -812,7 +812,7 @@
   on:resize={handleResize}
   on:mousemove={handleMousemove}
   on:mouseup={handleMouseup}
-  on:touchmove|preventDefault={handleTouchmove}
+  on:touchmove|preventDefault|nonpassive={handleTouchmove}
   on:touchend={handleTouchend}
   on:touchcancel={handleTouchend}
   on:mousewheel={handleMousewheel}
