@@ -365,6 +365,40 @@
     }
     ctx.stroke()
   }
+  const drawLineOptimized = (ctx: CanvasRenderingContext2D, line: Line) => {
+    ctx.lineWidth = 2 * dpr * line.width
+    if (!widthScaleInsensitive) {
+      ctx.lineWidth *= scale
+    }
+    ctx.lineJoin = 'round'
+    ctx.lineCap = 'round'
+    ctx.strokeStyle = line.color
+    if (line.points.length === 0) {
+      return
+    }
+    ctx.beginPath()
+    const globalPoints: GlobalPoint[] = line.points.map((v) => convertLocalToGlobal(v))
+    const isOutOfBoundsResults = globalPoints.map((v) => isOutOfBounds(v))
+    let beginIndex = 0
+    while (beginIndex < globalPoints.length - 1 && isOutOfBoundsResults[beginIndex] && isOutOfBoundsResults[beginIndex + 1]) {
+      beginIndex++
+    }
+    if (beginIndex === globalPoints.length - 1) {
+      return
+    }
+    ctx.moveTo(
+      globalPoints[beginIndex].x * dpr,
+      globalPoints[beginIndex].y * dpr,
+    )
+    for (let i = beginIndex + 1; i < globalPoints.length; ++i) {
+      const point = globalPoints[i]
+      ctx.lineTo(
+        point.x * dpr,
+        point.y * dpr,
+      )
+    }
+    ctx.stroke()
+  }
   const drawLineVariableWidthOptimized = (ctx: CanvasRenderingContext2D, line: Line) => {
     ctx.strokeStyle = line.color
     ctx.lineCap = 'round'
@@ -432,10 +466,11 @@
 
   const drawMethods = {
     default: drawLine,
+    optimized: drawLineOptimized,
     variableWidth: drawLineVariableWidthOptimized,
     variableWidth2: drawLineVariableWidthOptimized2,
   }
-  let currentDrawMethod = 'default'
+  let currentDrawMethod = 'optimized'
 
   const draw = () => {
     const ctx: CanvasRenderingContext2D = canvas.getContext('2d')
@@ -483,7 +518,7 @@
 
   function scaleBy(deltaScale, basePoint: GlobalPoint) {
     const newScale = Math.min(Math.max(0.01, scale * (1 + deltaScale)), 10)
-    const newDeltaScale =  newScale / scale - 1
+    const newDeltaScale = newScale / scale - 1
     scale = newScale
     panX = panX - (basePoint.x - canvasPixelWidth / 2) * newDeltaScale / scale
     panY = panY - (basePoint.y - canvasPixelHeight / 2) * newDeltaScale / scale
@@ -687,7 +722,7 @@
           try {
             lines.push(JSON.parse(stroke.content))
           } catch (e) {
-            console.warn("Unable to parse stroke")
+            console.warn('Unable to parse stroke')
             console.warn(stroke.content)
           }
         }
