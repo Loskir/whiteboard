@@ -482,9 +482,11 @@
   })
 
   function scaleBy(deltaScale, basePoint: GlobalPoint) {
-    scale *= 1 + deltaScale
-    panX = panX - (basePoint.x - canvasPixelWidth / 2) * deltaScale / scale
-    panY = panY - (basePoint.y - canvasPixelHeight / 2) * deltaScale / scale
+    const newScale = Math.min(Math.max(0.01, scale * (1 + deltaScale)), 10)
+    const newDeltaScale =  newScale / scale - 1
+    scale = newScale
+    panX = panX - (basePoint.x - canvasPixelWidth / 2) * newDeltaScale / scale
+    panY = panY - (basePoint.y - canvasPixelHeight / 2) * newDeltaScale / scale
     draw()
   }
 
