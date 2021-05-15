@@ -516,8 +516,10 @@
     ...touch.force && { force: touch.force },
   })
 
+  const limitScale = (s) => Math.min(Math.max(0.01, s), 10)
+
   function scaleBy(deltaScale, basePoint: GlobalPoint) {
-    const newScale = Math.min(Math.max(0.01, scale * (1 + deltaScale)), 10)
+    const newScale = limitScale(scale * (1 + deltaScale))
     const newDeltaScale = newScale / scale - 1
     scale = newScale
     panX = panX - (basePoint.x - canvasPixelWidth / 2) * newDeltaScale / scale
@@ -567,8 +569,8 @@
         }
       }
       const relativeScale = getDistance(newPoints[0], newPoints[1]) / getDistance(this.initialPoints[0], this.initialPoints[1])
-      const deltaScale = relativeScale - 1
-      const newScale = this.initialScale * relativeScale
+      const newScale = limitScale(this.initialScale * relativeScale)
+      const deltaScale = newScale / this.initialScale - 1
       const basePoint: GlobalPoint = {
         x: (newPoints[0].x + newPoints[1].x) / 2,
         y: (newPoints[1].y + newPoints[0].y) / 2,
