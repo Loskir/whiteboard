@@ -659,17 +659,17 @@
         )
         stylusTouch && stylusTool.onTouchstart(stylusTouch)
       }
-      if (touches.filter((v) => v.touchType === 'direct').length === 2) {
+      if (touches.filter((v) => v.touchType !== 'stylus').length === 2) {
         if (directTool.isDown) {
           const directTouch = touches.find(
-            (touch: Touch) => touch.touchType === 'direct' && touch.identifier === directTool.touchIdentifier,
+            (touch: Touch) => touch.touchType !== 'stylus' && touch.identifier === directTool.touchIdentifier,
           )
           directTool.onTouchend(directTouch)
         }
-        touchScaleController.onStart(touches.filter((v) => v.touchType === 'direct'))
+        touchScaleController.onStart(touches.filter((v) => v.touchType !== 'stylus'))
       } else if (!directTool.isDown) {
         const directTouch = [...event.changedTouches].find(
-          (touch: Touch) => touch.touchType === 'direct',
+          (touch: Touch) => touch.touchType !== 'stylus',
         )
         directTouch && directTool.onTouchstart(directTouch)
       }
@@ -679,14 +679,14 @@
         const touch = event.changedTouches.item(0)
         touch && tool.onTouchstart(touch)
       }
-      if (touches.filter((v) => v.touchType === 'direct').length === 2) {
+      if (touches.filter((v) => v.touchType !== 'stylus').length === 2) {
         if (tool.isDown) {
           const touch = touches.find(
             (touch: Touch) => touch.identifier === tool.touchIdentifier,
           )
           tool.onTouchend(touch)
         }
-        touchScaleController.onStart(touches.filter((v) => v.touchType === 'direct'))
+        touchScaleController.onStart(touches.filter((v) => v.touchType !== 'stylus'))
       } else if (!tool.isDown) {
         const touch = event.changedTouches.item(0)
         touch && tool.onTouchstart(touch)
@@ -707,7 +707,7 @@
       }
       if (directTool.isDown) {
         const directTouch = changedTouches.find(
-          (touch: Touch) => touch.touchType === 'direct' && touch.identifier === directTool.touchIdentifier,
+          (touch: Touch) => touch.identifier === directTool.touchIdentifier,
         )
         directTouch && directTool.onTouchmove(directTouch)
       }
@@ -739,7 +739,7 @@
       }
       if (directTool.isDown) {
         const directTouch = changedTouches.find(
-          (touch: Touch) => touch.touchType === 'direct' && touch.identifier === directTool.touchIdentifier,
+          (touch: Touch) => touch.identifier === directTool.touchIdentifier,
         )
         directTouch && directTool.onTouchend(directTouch)
       }
@@ -747,7 +747,7 @@
         touchScaleController.onEnd()
         if (!directTool.isDown) {
           const directTouch = Array.from(event.touches).find(
-            (touch: Touch) => touch.touchType === 'direct' && !changedTouches.find((v) => v.identifier === touch.identifier),
+            (touch: Touch) => !changedTouches.find((v) => v.identifier === touch.identifier),
           )
           directTouch && directTool.onTouchstart(directTouch)
         }
