@@ -748,6 +748,11 @@
     scale = 1
     draw()
   }
+  const resetPan = () => {
+    panX = 0
+    panY = 0
+    draw()
+  }
 </script>
 
 <svelte:window
@@ -817,6 +822,7 @@
       <input type="checkbox" bind:checked={widthScaleInsensitive} on:change={draw}/>
     </label>
     <span>Scale: {(scale * 100).toFixed(0)}% <button on:click={resetScale}>100%</button></span>
+    <span>Pan: ({panX}, {panY})<button on:click={resetPan}>Reset to (0, 0)</button></span>
     <button on:click={clear}>Clear</button>
   </div>
 </main>
