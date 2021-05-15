@@ -679,6 +679,18 @@
         const touch = event.changedTouches.item(0)
         touch && tool.onTouchstart(touch)
       }
+      if (touches.filter((v) => v.touchType === 'direct').length === 2) {
+        if (tool.isDown) {
+          const touch = touches.find(
+            (touch: Touch) => touch.identifier === tool.touchIdentifier,
+          )
+          tool.onTouchend(touch)
+        }
+        touchScaleController.onStart(touches.filter((v) => v.touchType === 'direct'))
+      } else if (!tool.isDown) {
+        const touch = event.changedTouches.item(0)
+        touch && tool.onTouchstart(touch)
+      }
     }
   }
   const handleTouchmove = (event: TouchEvent) => {
@@ -707,6 +719,9 @@
       if (tool.isDown) {
         const touch = [...event.changedTouches].find((touch: Touch) => touch.identifier === tool.touchIdentifier)
         touch && tool.onTouchmove(touch)
+      }
+      if (touchScaleController.isDown) {
+        touchScaleController.onMove(changedTouches)
       }
     }
   }
@@ -742,6 +757,9 @@
       if (tool.isDown) {
         const touch = [...event.changedTouches].find((touch: Touch) => touch.identifier === tool.touchIdentifier)
         touch && tool.onTouchend(touch)
+      }
+      if (touchScaleController.isDown && changedTouches.find((v) => touchScaleController.touchIdentifiers.includes(v.identifier))) {
+        touchScaleController.onEnd()
       }
     }
   }
@@ -855,6 +873,10 @@
     <label>
       Scale insensitive line width
       <input type="checkbox" bind:checked={widthScaleInsensitive} on:change={draw}/>
+    </label>
+    <label>
+      Stylus only mode
+      <input type="checkbox" bind:checked={stylusOnlyMode}/>
     </label>
     <span>Scale: {(scale * 100).toFixed(0)}% <button on:click={resetScale}>100%</button></span>
     <span>Pan: ({Math.round(panX)}, {Math.round(panY)})<button on:click={resetPan}>Reset to (0, 0)</button></span>
