@@ -539,7 +539,7 @@
       panX = this.initialPanX + (basePoint.x - this.initialBasePoint.x) / this.initialScale - (basePoint.x - canvasPixelWidth / 2) * deltaScale / newScale
       panY = this.initialPanY + (basePoint.y - this.initialBasePoint.y) / this.initialScale - (basePoint.y - canvasPixelHeight / 2) * deltaScale / newScale
       scale = newScale
-      console.log(scale, panX, panY)
+      // console.log(scale, panX, panY)
       draw()
       this.previousPoints = newPoints
     }
@@ -572,12 +572,12 @@
     currentToolName = selectedMainToolName
   }
   const handleMousewheel = (event: WheelEvent) => {
-    console.log(event)
+    // console.log(event)
     const deltaScale = -(event.deltaY / 100)
     scaleBy(deltaScale, getPointFromEvent(event))
   }
   const handleTouchstart = (event: TouchEvent) => {
-    console.log(event)
+    // console.log(event)
     const touches = Array.from(event.touches)
     if (stylusOnlyMode) {
       const stylusTool = toolsMap.get(currentToolName)
@@ -640,7 +640,7 @@
     }
   }
   const handleTouchend = (event: TouchEvent) => {
-    console.log(event)
+    // console.log(event)
     const changedTouches = Array.from(event.changedTouches)
     if (stylusOnlyMode) {
       const stylusTool = toolsMap.get(currentToolName)
