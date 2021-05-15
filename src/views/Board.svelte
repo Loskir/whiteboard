@@ -822,7 +822,7 @@
       <input type="checkbox" bind:checked={widthScaleInsensitive} on:change={draw}/>
     </label>
     <span>Scale: {(scale * 100).toFixed(0)}% <button on:click={resetScale}>100%</button></span>
-    <span>Pan: ({panX}, {panY})<button on:click={resetPan}>Reset to (0, 0)</button></span>
+    <span>Pan: ({Math.round(panX)}, {Math.round(panY)})<button on:click={resetPan}>Reset to (0, 0)</button></span>
     <button on:click={clear}>Clear</button>
   </div>
 </main>
