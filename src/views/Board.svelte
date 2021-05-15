@@ -24,6 +24,7 @@
   const dpr = window.devicePixelRatio || 1
 
   let canvas
+  let canvasForUnfinishedLine
 
   let canvasPixelWidth = 0
   let canvasPixelHeight = 0
@@ -87,7 +88,7 @@
   class Pencil extends Tool {
     name = 'pencil'
     cursor = 'crosshair'
-    currentLineIndex: number
+    unfinishedLine: Line
 
     onDown({ x, y, force = 0.25 }) {
       if (this.isDown) {
@@ -95,15 +96,14 @@
         return
       }
       this.isDown = true
-      this.currentLineIndex = lines.length
-      lines.push({
+      this.unfinishedLine = {
         id: nanoid(),
         color: lineColor,
         width: lineWidth,
         points: [
           // { x: convertGlobalToLocalX(x), y: convertGlobalToLocalY(y), width: 1 + force * 4 },
         ],
-      })
+      }
     }
 
     onMove({ x, y, force = 0.25 }) {
@@ -115,7 +115,7 @@
         y: convertGlobalToLocalY(y),
         width: 1 + force * 4,
       }
-      const currentLine = lines[this.currentLineIndex]
+      const currentLine = this.unfinishedLine
       if (currentLine.points.length === 0) {
         currentLine.points.push(localPoint)
       }
@@ -124,7 +124,7 @@
         return // the same as the previous point
       }
       currentLine.points.push(localPoint)
-      draw()
+      drawUnfinishedLine(this.unfinishedLine)
     }
 
     onUp() {
@@ -132,10 +132,11 @@
         return
       }
       this.isDown = false
-      let currentLine = lines[this.currentLineIndex]
-      if (currentLine.points.length === 1) {
-        lines.splice(this.currentLineIndex, 1) // "empty"
-      } else if (currentLine.points.length > 2) {
+      let currentLine = this.unfinishedLine
+      if (currentLine.points.length <= 1) {
+        return
+      }
+      if (currentLine.points.length > 2) {
         const newLine: Line = {
           id: currentLine.id,
           color: currentLine.color,
@@ -155,7 +156,7 @@
           }
         }
         newLine.points.push(currentLine.points[currentLine.points.length - 1])
-        lines[this.currentLineIndex] = newLine
+        lines.push(newLine)
         socket.emit('update', {
           add: [{
             stroke_id: currentLine.id,
@@ -163,9 +164,11 @@
           }],
         })
         console.log(`${currentLine.points.length} → ${newLine.points.length} points`)
+      } else {
+        lines.push(currentLine)
       }
-      this.currentLineIndex = -1
       console.log(lines)
+      clearUnfinishedLineCanvas()
       draw()
     }
 
@@ -211,15 +214,14 @@
         return
       }
       this.isDown = true
-      this.currentLineIndex = lines.length
-      lines.push({
+      this.unfinishedLine = {
         id: nanoid(),
         color: 'white',
         width: lineWidth,
         points: [
           // { x: convertGlobalToLocalX(x), y: convertGlobalToLocalY(y), width: 1 + force * 4 },
         ],
-      })
+      }
     }
   }
 
@@ -446,6 +448,20 @@
       }
       method(ctx, line)
     })
+  }
+  const clearUnfinishedLineCanvas = () => {
+    const ctx: CanvasRenderingContext2D = canvasForUnfinishedLine.getContext('2d')
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+  }
+  const drawUnfinishedLine = (unfinishedLine: Line) => {
+    clearUnfinishedLineCanvas()
+    const ctx: CanvasRenderingContext2D = canvasForUnfinishedLine.getContext('2d')
+    let method = drawMethods[currentDrawMethod]
+    if (!method) {
+      console.warn('Draw method not found, fallback to default')
+      method = drawLine
+    }
+    method(ctx, unfinishedLine)
   }
   $: {
     if (isMounted) {
@@ -704,8 +720,16 @@
 
 <main>
   <canvas
+    class="canvas"
     id="canvas"
     bind:this={canvas}
+    width={canvasWidth}
+    height={canvasHeight}
+    style="width: {canvasPixelWidth}px; height: {canvasPixelHeight}px"
+  />
+  <canvas
+    class="canvas"
+    bind:this={canvasForUnfinishedLine}
     width={canvasWidth}
     height={canvasHeight}
     style="cursor: {canvasCursor}; width: {canvasPixelWidth}px; height: {canvasPixelHeight}px"
@@ -769,4 +793,9 @@
     display flex
     flex-direction column
     align-items flex-end
+
+  .canvas
+    position fixed
+    left 0
+    top 0
 </style>
