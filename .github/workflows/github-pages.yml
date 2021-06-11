@@ -31,6 +31,9 @@ jobs:
       - name: Build
         run: yarn build
 
+      - name: Fix 404
+        run: cp public/index.html public/404.html
+
       - name: GitHub Pages
         # You may pin to the exact commit or the version.
         # uses: crazy-max/ghaction-github-pages@db4476a01402e1a7ce05f41832040eef16d14925
